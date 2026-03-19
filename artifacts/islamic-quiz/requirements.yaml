@@ -1,0 +1,21 @@
+packages:
+  "framer-motion": "Animations and smooth page transitions"
+  "zustand": "Global game state management for quiz logic"
+  "canvas-confetti": "Celebration particle effects for the results screen"
+  "@types/canvas-confetti": "Types for canvas-confetti"
+  "lucide-react": "Beautiful icons for UI"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility function to efficiently merge Tailwind CSS classes in JS"
+
+images:
+  - path: "artifacts/islamic-quiz/public/images/islamic-bg.png"
+    description: "Subtle geometric Islamic pattern background, dark green and gold, elegant, seamless, low opacity"
+    aspect_ratio: "16:9"
+  - path: "artifacts/islamic-quiz/public/images/logo.png"
+    description: "Beautiful elegant Islamic calligraphy logo mark for a quiz game, gold on transparent background"
+    aspect_ratio: "1:1"
+
+notes:
+  - Assumes Arabic RTL layout everywhere.
+  - WebSocket for multiplayer connects to /ws?room=CODE&playerId=ID
+  - Relies on @workspace/api-client-react for standard REST hooks.

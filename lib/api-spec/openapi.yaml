@@ -1,22 +1,24 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Islamic Quiz Game API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: rooms
+    description: Room management for local and online multiplayer
+  - name: matchmaking
+    description: Online matchmaking
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +26,126 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /rooms:
+    post:
+      operationId: createRoom
+      tags: [rooms]
+      summary: Create a new multiplayer room
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomRequest"
+      responses:
+        "200":
+          description: Room created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+
+  /rooms/{code}:
+    get:
+      operationId: getRoom
+      tags: [rooms]
+      summary: Get room by code
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Room found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "404":
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rooms/{code}/join:
+    post:
+      operationId: joinRoom
+      tags: [rooms]
+      summary: Join a room by code
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinRoomRequest"
+      responses:
+        "200":
+          description: Joined room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "404":
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Room is full
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /matchmaking/queue:
+    post:
+      operationId: joinMatchmaking
+      tags: [matchmaking]
+      summary: Join the online matchmaking queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MatchmakingRequest"
+      responses:
+        "200":
+          description: Queued or matched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchmakingResponse"
+
+  /matchmaking/queue/{playerId}:
+    delete:
+      operationId: leaveMatchmaking
+      tags: [matchmaking]
+      summary: Leave the matchmaking queue
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Left queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +156,116 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    CreateRoomRequest:
+      type: object
+      properties:
+        hostName:
+          type: string
+        questionCount:
+          type: integer
+          minimum: 10
+          maximum: 100
+        customQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomQuestion"
+      required:
+        - hostName
+        - questionCount
+
+    JoinRoomRequest:
+      type: object
+      properties:
+        guestName:
+          type: string
+      required:
+        - guestName
+
+    CustomQuestion:
+      type: object
+      properties:
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+          minItems: 4
+          maxItems: 4
+        correctAnswer:
+          type: string
+      required:
+        - question
+        - options
+        - correctAnswer
+
+    Room:
+      type: object
+      properties:
+        code:
+          type: string
+        status:
+          type: string
+          enum: [waiting, playing, finished]
+        hostName:
+          type: string
+        guestName:
+          type: string
+          nullable: true
+        questionCount:
+          type: integer
+        customQuestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomQuestion"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - code
+        - status
+        - hostName
+        - questionCount
+        - createdAt
+
+    MatchmakingRequest:
+      type: object
+      properties:
+        playerName:
+          type: string
+        playerId:
+          type: string
+      required:
+        - playerName
+        - playerId
+
+    MatchmakingResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [queued, matched]
+        roomCode:
+          type: string
+          nullable: true
+        playerId:
+          type: string
+      required:
+        - status
+        - playerId
