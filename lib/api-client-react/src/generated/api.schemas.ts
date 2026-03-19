@@ -34,11 +34,17 @@ export interface CreateRoomRequest {
    * @maximum 100
    */
   questionCount: number;
+  /**
+   * @minimum 2
+   * @maximum 8
+   */
+  maxPlayers?: number;
   customQuestions?: CustomQuestion[];
 }
 
 export interface JoinRoomRequest {
   guestName: string;
+  playerId?: string;
 }
 
 export type RoomStatus = (typeof RoomStatus)[keyof typeof RoomStatus];
@@ -53,7 +59,8 @@ export interface Room {
   code: string;
   status: RoomStatus;
   hostName: string;
-  guestName?: string | null;
+  maxPlayers: number;
+  currentPlayerCount: number;
   questionCount: number;
   customQuestions?: CustomQuestion[];
   createdAt: string;

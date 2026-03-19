@@ -3,45 +3,37 @@ import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import confetti from "canvas-confetti";
 import { Trophy, RefreshCcw, Home, Star, Medal } from "lucide-react";
-import { useGameStore, Player } from "@/lib/store";
+import { useGameStore, PlayerColor } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 
-const PLAYER_COLORS: Record<string, { bg: string; border: string; text: string; badge: string }> = {
-  blue: {
-    bg: "from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/30",
-    border: "border-blue-300 dark:border-blue-700",
-    text: "text-blue-700 dark:text-blue-300",
-    badge: "bg-blue-500",
-  },
-  orange: {
-    bg: "from-orange-50 to-orange-100 dark:from-orange-950/40 dark:to-orange-900/30",
-    border: "border-orange-300 dark:border-orange-700",
-    text: "text-orange-700 dark:text-orange-300",
-    badge: "bg-orange-500",
-  },
-  green: {
-    bg: "from-emerald-50 to-emerald-100 dark:from-emerald-950/40 dark:to-emerald-900/30",
-    border: "border-emerald-300 dark:border-emerald-700",
-    text: "text-emerald-700 dark:text-emerald-300",
-    badge: "bg-emerald-500",
-  },
+const COLOR_STYLES: Record<string, { bg: string; border: string; text: string; badge: string }> = {
+  blue: { bg: "from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/30", border: "border-blue-300 dark:border-blue-700", text: "text-blue-700 dark:text-blue-300", badge: "bg-blue-500" },
+  orange: { bg: "from-orange-50 to-orange-100 dark:from-orange-950/40 dark:to-orange-900/30", border: "border-orange-300 dark:border-orange-700", text: "text-orange-700 dark:text-orange-300", badge: "bg-orange-500" },
+  green: { bg: "from-emerald-50 to-emerald-100 dark:from-emerald-950/40 dark:to-emerald-900/30", border: "border-emerald-300 dark:border-emerald-700", text: "text-emerald-700 dark:text-emerald-300", badge: "bg-emerald-500" },
+  purple: { bg: "from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/30", border: "border-purple-300 dark:border-purple-700", text: "text-purple-700 dark:text-purple-300", badge: "bg-purple-500" },
+  red: { bg: "from-red-50 to-red-100 dark:from-red-950/40 dark:to-red-900/30", border: "border-red-300 dark:border-red-700", text: "text-red-700 dark:text-red-300", badge: "bg-red-500" },
+  cyan: { bg: "from-cyan-50 to-cyan-100 dark:from-cyan-950/40 dark:to-cyan-900/30", border: "border-cyan-300 dark:border-cyan-700", text: "text-cyan-700 dark:text-cyan-300", badge: "bg-cyan-500" },
+  pink: { bg: "from-pink-50 to-pink-100 dark:from-pink-950/40 dark:to-pink-900/30", border: "border-pink-300 dark:border-pink-700", text: "text-pink-700 dark:text-pink-300", badge: "bg-pink-500" },
+  yellow: { bg: "from-yellow-50 to-yellow-100 dark:from-yellow-950/40 dark:to-yellow-900/30", border: "border-yellow-300 dark:border-yellow-700", text: "text-yellow-700 dark:text-yellow-300", badge: "bg-yellow-500" },
 };
 
 export default function ResultsScreen() {
-  const { players, questions, mode, reset } = useGameStore();
+  const { players, onlinePlayers, questions, mode, reset } = useGameStore();
   const [, setLocation] = useLocation();
 
   const totalQuestions = questions.length;
-  const isMultiplayer = players.length > 1;
+  const isOnline = mode === 'online';
+  const isMultiplayer = isOnline || players.length > 1;
 
-  let winner: Player | null = null;
-  let isDraw = false;
+  // Choose the right player list for display
+  const displayPlayers = isOnline
+    ? [...onlinePlayers].sort((a, b) => b.score - a.score)
+    : [...players].sort((a, b) => b.score - a.score);
 
-  if (isMultiplayer) {
-    if (players[0].score > players[1].score) winner = players[0];
-    else if (players[1].score > players[0].score) winner = players[1];
-    else isDraw = true;
-  }
+  const winner = isMultiplayer && displayPlayers.length > 1
+    ? (displayPlayers[0].score > displayPlayers[1].score ? displayPlayers[0] : null)
+    : null;
+  const isDraw = isMultiplayer && displayPlayers.length > 1 && displayPlayers[0].score === displayPlayers[1].score;
 
   useEffect(() => {
     const end = Date.now() + 3500;
@@ -58,12 +50,10 @@ export default function ResultsScreen() {
     setLocation("/");
   };
 
-  // Sort players by score (descending) for the leaderboard
-  const sortedPlayers = isMultiplayer ? [...players].sort((a, b) => b.score - a.score) : players;
+  const colsClass = displayPlayers.length === 1 ? "max-w-xs mx-auto" : displayPlayers.length === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
 
   return (
     <div className="min-h-screen bg-background p-6 flex flex-col items-center justify-center relative overflow-hidden">
-      {/* Glow blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-32 -left-20 w-96 h-96 bg-primary/20 rounded-full blur-[80px]" />
         <div className="absolute -bottom-32 -right-20 w-96 h-96 bg-secondary/20 rounded-full blur-[80px]" />
@@ -73,11 +63,11 @@ export default function ResultsScreen() {
         initial={{ scale: 0.85, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", bounce: 0.4 }}
-        className="z-10 w-full max-w-2xl"
+        className="z-10 w-full max-w-3xl"
       >
         <div className="bg-card/90 backdrop-blur-xl border border-border rounded-[2.5rem] p-8 md:p-12 shadow-2xl">
 
-          {/* Trophy */}
+          {/* Trophy Header */}
           <div className="text-center mb-8">
             <motion.div
               initial={{ y: -20 }}
@@ -94,10 +84,15 @@ export default function ResultsScreen() {
                   <h1 className="text-4xl font-black text-foreground mb-1">تعادل!</h1>
                   <p className="text-muted-foreground text-lg">نتيجة متساوية 🤝</p>
                 </>
+              ) : winner ? (
+                <>
+                  <h1 className="text-4xl font-black text-foreground mb-1">🎉 الفائز</h1>
+                  <p className={`text-3xl font-black ${COLOR_STYLES[winner.color]?.text}`}>{winner.name}!</p>
+                </>
               ) : (
                 <>
-                  <h1 className="text-4xl font-black text-foreground mb-1">🎉 الفائز هو</h1>
-                  <p className={`text-3xl font-black ${PLAYER_COLORS[winner!.color]?.text}`}>{winner!.name}!</p>
+                  <h1 className="text-4xl font-black text-foreground mb-1">النتائج النهائية</h1>
+                  <p className="text-muted-foreground">ترتيب اللاعبين</p>
                 </>
               )
             ) : (
@@ -108,12 +103,13 @@ export default function ResultsScreen() {
             )}
           </div>
 
-          {/* Scores */}
-          <div className={`grid gap-4 mb-8 ${isMultiplayer ? 'grid-cols-1 sm:grid-cols-2' : 'max-w-xs mx-auto'}`}>
-            {sortedPlayers.map((p, rank) => {
-              const colors = PLAYER_COLORS[p.color] ?? PLAYER_COLORS.green;
+          {/* Player Cards */}
+          <div className={`grid gap-4 mb-8 ${colsClass}`}>
+            {displayPlayers.map((p, rank) => {
+              const colors = COLOR_STYLES[p.color] ?? COLOR_STYLES.green;
               const isWinner = winner?.id === p.id && !isDraw;
-              const pct = Math.round((p.score / totalQuestions) * 100);
+              const pct = totalQuestions > 0 ? Math.round((p.score / totalQuestions) * 100) : 0;
+              const rankEmoji = rank === 0 ? "🥇" : rank === 1 ? "🥈" : rank === 2 ? "🥉" : `${rank + 1}.`;
 
               return (
                 <motion.div
@@ -128,10 +124,8 @@ export default function ResultsScreen() {
                       <Star className="w-5 h-5 text-yellow-500 fill-yellow-400" />
                     </div>
                   )}
-                  {isMultiplayer && rank === 0 && !isDraw && (
-                    <div className="absolute top-3 right-3">
-                      <Medal className="w-5 h-5 text-yellow-500 fill-yellow-400" />
-                    </div>
+                  {isMultiplayer && (
+                    <div className="absolute top-3 right-3 text-xl">{rankEmoji}</div>
                   )}
 
                   <div className={`text-sm font-bold mb-1 ${colors.text}`}>{p.name}</div>
@@ -140,7 +134,6 @@ export default function ResultsScreen() {
                     <span className="text-muted-foreground text-lg mb-2">/ {totalQuestions}</span>
                   </div>
 
-                  {/* Progress bar */}
                   <div className="h-2.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}

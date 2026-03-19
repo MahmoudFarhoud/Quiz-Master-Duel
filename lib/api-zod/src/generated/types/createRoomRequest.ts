@@ -14,5 +14,10 @@ export interface CreateRoomRequest {
    * @maximum 100
    */
   questionCount: number;
+  /**
+   * @minimum 2
+   * @maximum 8
+   */
+  maxPlayers?: number;
   customQuestions?: CustomQuestion[];
 }

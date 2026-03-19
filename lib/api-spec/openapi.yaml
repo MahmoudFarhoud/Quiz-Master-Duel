@@ -102,7 +102,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "400":
-          description: Room is full
+          description: Room is full or already started
           content:
             application/json:
               schema:
@@ -181,6 +181,11 @@ components:
           type: integer
           minimum: 10
           maximum: 100
+        maxPlayers:
+          type: integer
+          minimum: 2
+          maximum: 8
+          default: 2
         customQuestions:
           type: array
           items:
@@ -193,6 +198,8 @@ components:
       type: object
       properties:
         guestName:
+          type: string
+        playerId:
           type: string
       required:
         - guestName
@@ -225,9 +232,10 @@ components:
           enum: [waiting, playing, finished]
         hostName:
           type: string
-        guestName:
-          type: string
-          nullable: true
+        maxPlayers:
+          type: integer
+        currentPlayerCount:
+          type: integer
         questionCount:
           type: integer
         customQuestions:
@@ -241,6 +249,8 @@ components:
         - code
         - status
         - hostName
+        - maxPlayers
+        - currentPlayerCount
         - questionCount
         - createdAt
 

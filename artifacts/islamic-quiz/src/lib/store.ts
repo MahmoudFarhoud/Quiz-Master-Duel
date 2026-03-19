@@ -1,7 +1,17 @@
 import { create } from 'zustand';
 import { Question, quizQuestions } from '../data/questions';
 
-export type PlayerColor = 'blue' | 'orange' | 'green';
+export type PlayerColor = 'blue' | 'orange' | 'green' | 'purple' | 'red' | 'cyan' | 'pink' | 'yellow';
+
+export const PLAYER_COLORS: PlayerColor[] = ['blue', 'orange', 'green', 'purple', 'red', 'cyan', 'pink', 'yellow'];
+
+export interface OnlinePlayer {
+  id: string;
+  name: string;
+  score: number;
+  color: PlayerColor;
+  finished: boolean;
+}
 
 export interface Player {
   id: string;
@@ -18,9 +28,18 @@ export interface Player {
 interface GameState {
   mode: 'solo' | 'local' | 'online' | null;
   status: 'setup' | 'playing' | 'round_transition' | 'results';
+
+  // Solo / Local
   players: Player[];
   currentTurn: number;
-  currentRound: number; // 0 = player1 round, 1 = player2 round (local mode)
+  currentRound: number;
+
+  // Online simultaneous
+  myPlayerId: string | null;
+  myPlayerName: string | null;
+  onlinePlayers: OnlinePlayer[];
+
+  // Shared
   questions: Question[];
   currentQuestionIndex: number;
   roomCode: string | null;
@@ -29,12 +48,19 @@ interface GameState {
   // Actions
   initSolo: (count: number, playerName?: string) => void;
   initLocal: (p1Name: string, p2Name: string, count: number, customQs: Question[]) => void;
-  initOnline: (roomCode: string, isHost: boolean, players: Player[], questions: Question[]) => void;
+  initOnline: (opts: { roomCode: string; isHost: boolean; myPlayerId: string; myPlayerName: string; players: OnlinePlayer[]; questions: Question[] }) => void;
 
   answerQuestion: (isCorrect: boolean) => void;
   useLifeline: (type: 'fifty' | 'skip' | 'time') => void;
   nextQuestion: () => void;
   startNextRound: () => void;
+
+  // Online-specific
+  updateOnlineScore: (playerId: string, score: number) => void;
+  markOnlineFinished: (playerId: string) => void;
+  addOnlinePlayer: (p: OnlinePlayer) => void;
+  removeOnlinePlayer: (playerId: string) => void;
+
   endGame: () => void;
   reset: () => void;
 }
@@ -62,12 +88,15 @@ export const useGameStore = create<GameState>((set) => ({
   players: [],
   currentTurn: 0,
   currentRound: 0,
+  myPlayerId: null,
+  myPlayerName: null,
+  onlinePlayers: [],
   questions: [],
   currentQuestionIndex: 0,
   roomCode: null,
   isHost: false,
 
-  initSolo: (count: number, playerName = "أنت") => set({
+  initSolo: (count, playerName = "أنت") => set({
     mode: 'solo',
     status: 'playing',
     players: [{ id: '1', name: playerName, score: 0, color: 'green', lifelines: { ...defaultLifelines } }],
@@ -75,6 +104,9 @@ export const useGameStore = create<GameState>((set) => ({
     currentRound: 0,
     questions: getRandomQuestions(count),
     currentQuestionIndex: 0,
+    onlinePlayers: [],
+    myPlayerId: null,
+    myPlayerName: null,
   }),
 
   initLocal: (p1Name, p2Name, count, customQs) => set({
@@ -88,21 +120,42 @@ export const useGameStore = create<GameState>((set) => ({
     currentRound: 0,
     questions: getRandomQuestions(count, customQs),
     currentQuestionIndex: 0,
+    onlinePlayers: [],
+    myPlayerId: null,
+    myPlayerName: null,
   }),
 
-  initOnline: (roomCode, isHost, players, questions) => set({
+  initOnline: ({ roomCode, isHost, myPlayerId, myPlayerName, players, questions }) => set({
     mode: 'online',
     status: 'playing',
     roomCode,
     isHost,
-    players,
-    currentTurn: 0,
-    currentRound: 0,
+    myPlayerId,
+    myPlayerName,
+    onlinePlayers: players,
     questions,
     currentQuestionIndex: 0,
+    currentTurn: 0,
+    currentRound: 0,
+    players: [{
+      id: myPlayerId,
+      name: myPlayerName,
+      score: 0,
+      color: players.find(p => p.id === myPlayerId)?.color ?? 'green',
+      lifelines: { ...defaultLifelines },
+    }],
   }),
 
-  answerQuestion: (isCorrect: boolean) => set((state) => {
+  answerQuestion: (isCorrect) => set((state) => {
+    if (state.mode === 'online') {
+      const newOnline = state.onlinePlayers.map(p =>
+        p.id === state.myPlayerId ? { ...p, score: p.score + (isCorrect ? 1 : 0) } : p
+      );
+      const newPlayers = state.players.map((p, i) =>
+        i === 0 ? { ...p, score: p.score + (isCorrect ? 1 : 0) } : p
+      );
+      return { onlinePlayers: newOnline, players: newPlayers };
+    }
     const newPlayers = state.players.map((p, i) =>
       i === state.currentTurn ? { ...p, score: p.score + (isCorrect ? 1 : 0) } : p
     );
@@ -113,24 +166,26 @@ export const useGameStore = create<GameState>((set) => ({
     const nextIndex = state.currentQuestionIndex + 1;
 
     if (state.mode === 'local' && state.players.length > 1) {
-      // Local 2-player: each player goes through ALL questions separately
       if (nextIndex >= state.questions.length) {
         if (state.currentRound === 0) {
-          // Player 1 finished → transition to Player 2's turn
           return { status: 'round_transition', currentQuestionIndex: nextIndex };
         } else {
-          // Player 2 finished → show results
           return { status: 'results' };
         }
       }
       return { currentQuestionIndex: nextIndex };
     }
 
-    // Solo or online: single pass
+    // Solo or online
     if (nextIndex >= state.questions.length) {
       return { status: 'results' };
     }
-    return { currentQuestionIndex: nextIndex, currentTurn: state.players.length > 1 ? (state.currentTurn === 0 ? 1 : 0) : 0 };
+    return {
+      currentQuestionIndex: nextIndex,
+      currentTurn: state.mode !== 'online' && state.players.length > 1
+        ? (state.currentTurn === 0 ? 1 : 0)
+        : 0
+    };
   }),
 
   startNextRound: () => set((state) => ({
@@ -150,6 +205,23 @@ export const useGameStore = create<GameState>((set) => ({
     return { players: newPlayers };
   }),
 
+  updateOnlineScore: (playerId, score) => set((state) => ({
+    onlinePlayers: state.onlinePlayers.map(p => p.id === playerId ? { ...p, score } : p),
+  })),
+
+  markOnlineFinished: (playerId) => set((state) => ({
+    onlinePlayers: state.onlinePlayers.map(p => p.id === playerId ? { ...p, finished: true } : p),
+  })),
+
+  addOnlinePlayer: (p) => set((state) => {
+    if (state.onlinePlayers.find(existing => existing.id === p.id)) return {};
+    return { onlinePlayers: [...state.onlinePlayers, p] };
+  }),
+
+  removeOnlinePlayer: (playerId) => set((state) => ({
+    onlinePlayers: state.onlinePlayers.filter(p => p.id !== playerId),
+  })),
+
   endGame: () => set({ status: 'results' }),
 
   reset: () => set({
@@ -158,9 +230,12 @@ export const useGameStore = create<GameState>((set) => ({
     players: [],
     currentTurn: 0,
     currentRound: 0,
+    myPlayerId: null,
+    myPlayerName: null,
+    onlinePlayers: [],
     questions: [],
     currentQuestionIndex: 0,
     roomCode: null,
     isHost: false,
-  })
+  }),
 }));

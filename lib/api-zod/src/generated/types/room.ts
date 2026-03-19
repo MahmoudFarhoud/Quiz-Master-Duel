@@ -12,7 +12,8 @@ export interface Room {
   code: string;
   status: RoomStatus;
   hostName: string;
-  guestName?: string | null;
+  maxPlayers: number;
+  currentPlayerCount: number;
   questionCount: number;
   customQuestions?: CustomQuestion[];
   createdAt: Date;

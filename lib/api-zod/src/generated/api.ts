@@ -20,6 +20,10 @@ export const HealthCheckResponse = zod.object({
 export const createRoomBodyQuestionCountMin = 10;
 export const createRoomBodyQuestionCountMax = 100;
 
+export const createRoomBodyMaxPlayersDefault = 2;
+export const createRoomBodyMaxPlayersMin = 2;
+export const createRoomBodyMaxPlayersMax = 8;
+
 export const createRoomBodyCustomQuestionsItemOptionsMin = 4;
 export const createRoomBodyCustomQuestionsItemOptionsMax = 4;
 
@@ -29,6 +33,11 @@ export const CreateRoomBody = zod.object({
     .number()
     .min(createRoomBodyQuestionCountMin)
     .max(createRoomBodyQuestionCountMax),
+  maxPlayers: zod
+    .number()
+    .min(createRoomBodyMaxPlayersMin)
+    .max(createRoomBodyMaxPlayersMax)
+    .default(createRoomBodyMaxPlayersDefault),
   customQuestions: zod
     .array(
       zod.object({
@@ -50,7 +59,8 @@ export const CreateRoomResponse = zod.object({
   code: zod.string(),
   status: zod.enum(["waiting", "playing", "finished"]),
   hostName: zod.string(),
-  guestName: zod.string().nullish(),
+  maxPlayers: zod.number(),
+  currentPlayerCount: zod.number(),
   questionCount: zod.number(),
   customQuestions: zod
     .array(
@@ -81,7 +91,8 @@ export const GetRoomResponse = zod.object({
   code: zod.string(),
   status: zod.enum(["waiting", "playing", "finished"]),
   hostName: zod.string(),
-  guestName: zod.string().nullish(),
+  maxPlayers: zod.number(),
+  currentPlayerCount: zod.number(),
   questionCount: zod.number(),
   customQuestions: zod
     .array(
@@ -107,6 +118,7 @@ export const JoinRoomParams = zod.object({
 
 export const JoinRoomBody = zod.object({
   guestName: zod.string(),
+  playerId: zod.string().optional(),
 });
 
 export const joinRoomResponseCustomQuestionsItemOptionsMin = 4;
@@ -116,7 +128,8 @@ export const JoinRoomResponse = zod.object({
   code: zod.string(),
   status: zod.enum(["waiting", "playing", "finished"]),
   hostName: zod.string(),
-  guestName: zod.string().nullish(),
+  maxPlayers: zod.number(),
+  currentPlayerCount: zod.number(),
   questionCount: zod.number(),
   customQuestions: zod
     .array(

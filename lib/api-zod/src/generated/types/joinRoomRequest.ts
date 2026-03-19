@@ -8,4 +8,5 @@
 
 export interface JoinRoomRequest {
   guestName: string;
+  playerId?: string;
 }
