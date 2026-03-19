@@ -17,47 +17,43 @@ export interface Player {
 
 interface GameState {
   mode: 'solo' | 'local' | 'online' | null;
-  status: 'setup' | 'playing' | 'results';
+  status: 'setup' | 'playing' | 'round_transition' | 'results';
   players: Player[];
   currentTurn: number;
+  currentRound: number; // 0 = player1 round, 1 = player2 round (local mode)
   questions: Question[];
   currentQuestionIndex: number;
   roomCode: string | null;
   isHost: boolean;
-  
+
   // Actions
   initSolo: (count: number, playerName?: string) => void;
   initLocal: (p1Name: string, p2Name: string, count: number, customQs: Question[]) => void;
   initOnline: (roomCode: string, isHost: boolean, players: Player[], questions: Question[]) => void;
-  
+
   answerQuestion: (isCorrect: boolean) => void;
   useLifeline: (type: 'fifty' | 'skip' | 'time') => void;
   nextQuestion: () => void;
+  startNextRound: () => void;
   endGame: () => void;
   reset: () => void;
 }
 
 const defaultLifelines = { fifty: true, skip: true, time: true };
 
-// Helper to get random questions
+const shuffle = <T>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
 const getRandomQuestions = (count: number, customQs: Question[] = []): Question[] => {
-  const pool = [...quizQuestions];
-  // Shuffle
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  
+  const pool = shuffle([...quizQuestions]);
   const selected = pool.slice(0, Math.max(0, count - customQs.length));
-  
-  const combined = [...customQs, ...selected];
-  // Shuffle combined again
-  for (let i = combined.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [combined[i], combined[j]] = [combined[j], combined[i]];
-  }
-  
-  return combined;
+  return shuffle([...customQs, ...selected]);
 };
 
 export const useGameStore = create<GameState>((set) => ({
@@ -65,6 +61,7 @@ export const useGameStore = create<GameState>((set) => ({
   status: 'setup',
   players: [],
   currentTurn: 0,
+  currentRound: 0,
   questions: [],
   currentQuestionIndex: 0,
   roomCode: null,
@@ -75,6 +72,7 @@ export const useGameStore = create<GameState>((set) => ({
     status: 'playing',
     players: [{ id: '1', name: playerName, score: 0, color: 'green', lifelines: { ...defaultLifelines } }],
     currentTurn: 0,
+    currentRound: 0,
     questions: getRandomQuestions(count),
     currentQuestionIndex: 0,
   }),
@@ -87,6 +85,7 @@ export const useGameStore = create<GameState>((set) => ({
       { id: '2', name: p2Name || "اللاعب 2", score: 0, color: 'orange', lifelines: { ...defaultLifelines } }
     ],
     currentTurn: 0,
+    currentRound: 0,
     questions: getRandomQuestions(count, customQs),
     currentQuestionIndex: 0,
   }),
@@ -98,31 +97,56 @@ export const useGameStore = create<GameState>((set) => ({
     isHost,
     players,
     currentTurn: 0,
+    currentRound: 0,
     questions,
     currentQuestionIndex: 0,
   }),
 
   answerQuestion: (isCorrect: boolean) => set((state) => {
-    const newPlayers = [...state.players];
-    if (isCorrect) {
-      newPlayers[state.currentTurn].score += 1;
-    }
+    const newPlayers = state.players.map((p, i) =>
+      i === state.currentTurn ? { ...p, score: p.score + (isCorrect ? 1 : 0) } : p
+    );
     return { players: newPlayers };
   }),
 
   nextQuestion: () => set((state) => {
     const nextIndex = state.currentQuestionIndex + 1;
+
+    if (state.mode === 'local' && state.players.length > 1) {
+      // Local 2-player: each player goes through ALL questions separately
+      if (nextIndex >= state.questions.length) {
+        if (state.currentRound === 0) {
+          // Player 1 finished → transition to Player 2's turn
+          return { status: 'round_transition', currentQuestionIndex: nextIndex };
+        } else {
+          // Player 2 finished → show results
+          return { status: 'results' };
+        }
+      }
+      return { currentQuestionIndex: nextIndex };
+    }
+
+    // Solo or online: single pass
     if (nextIndex >= state.questions.length) {
       return { status: 'results' };
     }
-    // Alternate turn
-    const nextTurn = state.players.length > 1 ? (state.currentTurn === 0 ? 1 : 0) : 0;
-    return { currentQuestionIndex: nextIndex, currentTurn: nextTurn };
+    return { currentQuestionIndex: nextIndex, currentTurn: state.players.length > 1 ? (state.currentTurn === 0 ? 1 : 0) : 0 };
   }),
 
+  startNextRound: () => set((state) => ({
+    status: 'playing',
+    currentRound: 1,
+    currentTurn: 1,
+    currentQuestionIndex: 0,
+    players: state.players.map((p, i) =>
+      i === 1 ? { ...p, lifelines: { ...defaultLifelines } } : p
+    ),
+  })),
+
   useLifeline: (type) => set((state) => {
-    const newPlayers = [...state.players];
-    newPlayers[state.currentTurn].lifelines[type] = false;
+    const newPlayers = state.players.map((p, i) =>
+      i === state.currentTurn ? { ...p, lifelines: { ...p.lifelines, [type]: false } } : p
+    );
     return { players: newPlayers };
   }),
 
@@ -133,6 +157,7 @@ export const useGameStore = create<GameState>((set) => ({
     status: 'setup',
     players: [],
     currentTurn: 0,
+    currentRound: 0,
     questions: [],
     currentQuestionIndex: 0,
     roomCode: null,
