@@ -26,7 +26,7 @@ function broadcast(roomCode: string, message: object, excludePlayerId?: string) 
 }
 
 export function setupWebSocket(server: Server) {
-  const wss = new WebSocketServer({ server, path: "/ws" });
+  const wss = new WebSocketServer({ server, path: "/api/ws" });
 
   wss.on("connection", (ws, req) => {
     const url = new URL(req.url ?? "/", "http://localhost");

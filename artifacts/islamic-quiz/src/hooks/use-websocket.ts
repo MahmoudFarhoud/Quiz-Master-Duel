@@ -5,7 +5,7 @@ export type WsMessage = { type: string; [key: string]: any };
 const getWsUrl = (code: string, playerId: string, playerName: string) => {
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = window.location.host;
-  return `${proto}//${host}/ws?code=${encodeURIComponent(code)}&playerId=${encodeURIComponent(playerId)}&playerName=${encodeURIComponent(playerName)}`;
+  return `${proto}//${host}/api/ws?code=${encodeURIComponent(code)}&playerId=${encodeURIComponent(playerId)}&playerName=${encodeURIComponent(playerName)}`;
 };
 
 export function useWebSocket(
