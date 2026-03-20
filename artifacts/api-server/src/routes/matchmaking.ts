@@ -1,10 +1,10 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { db } from "@workspace/db";
 import { roomsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { JoinMatchmakingBody, LeaveMatchmakingParams } from "@workspace/api-zod";
 
-const router: IRouter = Router();
+const router = Router();
 
 interface QueueEntry {
   playerId: string;
@@ -32,7 +32,7 @@ function cleanOldResults() {
   }
 }
 
-router.post("/queue", async (req, res) => {
+router.post("/queue", async (req, res): Promise<void> => {
   try {
     cleanOldResults();
     const body = JoinMatchmakingBody.parse(req.body);
@@ -40,27 +40,25 @@ router.post("/queue", async (req, res) => {
     // Already matched?
     if (matchResults.has(body.playerId)) {
       const result = matchResults.get(body.playerId)!;
-      return res.json({
-        status: "matched",
-        roomCode: result.roomCode,
-        isHost: result.isHost,
-        playerId: body.playerId,
-      });
+      res.json({ status: "matched", roomCode: result.roomCode, isHost: result.isHost, playerId: body.playerId });
+      return;
     }
 
     // Already in queue (re-poll)
     const existingIdx = matchmakingQueue.findIndex(q => q.playerId === body.playerId);
     if (existingIdx !== -1) {
-      return res.json({ status: "queued", roomCode: null, playerId: body.playerId });
+      res.json({ status: "queued", roomCode: null, playerId: body.playerId });
+      return;
     }
 
-    // Try to match
+    // Try to match with someone else in queue
     if (matchmakingQueue.length > 0) {
       const opponent = matchmakingQueue.shift()!;
       if (opponent.playerId === body.playerId) {
         matchmakingQueue.unshift(opponent);
         matchmakingQueue.push({ playerId: body.playerId, playerName: body.playerName, joinedAt: Date.now() });
-        return res.json({ status: "queued", roomCode: null, playerId: body.playerId });
+        res.json({ status: "queued", roomCode: null, playerId: body.playerId });
+        return;
       }
 
       let code = generateCode();
@@ -83,18 +81,15 @@ router.post("/queue", async (req, res) => {
         status: "playing",
       });
 
-      // body (second player) is isHost (generates and starts the game)
+      // Second player (current request) is host — generates & sends questions
       matchResults.set(opponent.playerId, { roomCode: code, isHost: false, assignedAt: Date.now() });
       matchResults.set(body.playerId, { roomCode: code, isHost: true, assignedAt: Date.now() });
 
-      return res.json({
-        status: "matched",
-        roomCode: code,
-        isHost: true,
-        playerId: body.playerId,
-      });
+      res.json({ status: "matched", roomCode: code, isHost: true, playerId: body.playerId });
+      return;
     }
 
+    // Queue this player
     matchmakingQueue.push({ playerId: body.playerId, playerName: body.playerName, joinedAt: Date.now() });
     res.json({ status: "queued", roomCode: null, playerId: body.playerId });
   } catch (err: any) {
@@ -102,7 +97,7 @@ router.post("/queue", async (req, res) => {
   }
 });
 
-router.delete("/queue/:playerId", (req, res) => {
+router.delete("/queue/:playerId", (req, res): void => {
   try {
     const { playerId } = LeaveMatchmakingParams.parse(req.params);
     const idx = matchmakingQueue.findIndex(q => q.playerId === playerId);

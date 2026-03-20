@@ -112,7 +112,6 @@ export default function Matchmaking() {
         const players: OnlinePlayer[] = msg.players ?? [];
         const questions: Question[] = msg.questions ?? [];
 
-        // Update opponent placeholder with real name
         const updatedPlayers = players.map((p: OnlinePlayer) =>
           p.id === myId.current ? { ...p, name } : p
         );
@@ -127,6 +126,7 @@ export default function Matchmaking() {
         });
         setLocation("/game");
       });
+      return undefined;
     }
   }, [matchedRoom, connected, amHost]);
 

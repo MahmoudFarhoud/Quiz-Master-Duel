@@ -20,12 +20,20 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ## Artifacts
 
 ### `artifacts/islamic-quiz` — مسابقة إسلامية
-Islamic quiz game with:
-- 300 Islamic questions (bundled in `src/data/questions.ts`)
-- Solo mode: سؤال وسؤال (offline, with 10s timer, lifelines, color per player)
-- With Friend mode: Local (room code) and Online (matchmaking + WebSocket)
-- Custom question creation
-- Arabic RTL UI
+Complete Arabic Islamic Quiz Game with:
+- **300 Islamic questions** bundled in `src/data/questions.ts`
+- **Solo mode**: offline, 10s timer per question, lifelines (50/50, skip, +10s)
+- **Local multiplayer**: Sequential — Player 1 answers all questions, then Player 2 answers same questions, ranked results
+- **Online Room**: Host creates room with max players (2-8) + question count, all players answer simultaneously, ranked leaderboard
+- **Random matchmaking**: 1v1 — matches only with another player also searching
+- **Custom questions**: Host can add custom questions to the pool
+- **Arabic RTL UI**, green/gold Islamic theme, confetti on results
+
+### `artifacts/api-server` — API Server
+Express backend with REST + WebSocket:
+- REST API for room management and matchmaking
+- WebSocket relay at `/ws` for real-time game sync
+- Matchmaking queue (in-memory) with match result caching
 
 ## Structure
 
@@ -39,47 +47,68 @@ artifacts-monorepo/
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
 │   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json
-├── tsconfig.json
 └── package.json
 ```
 
 ## API Endpoints
 
-- `POST /api/rooms` — create a room
+- `POST /api/rooms` — create a room (`hostName`, `questionCount`, `maxPlayers` 2-8)
 - `GET /api/rooms/:code` — get room by code
-- `POST /api/rooms/:code/join` — join a room
-- `POST /api/matchmaking/queue` — join matchmaking
+- `POST /api/rooms/:code/join` — join a room (`guestName`, `playerId`)
+- `POST /api/matchmaking/queue` — join/poll matchmaking queue (`playerName`, `playerId`)
 - `DELETE /api/matchmaking/queue/:playerId` — leave matchmaking
 - `WebSocket /ws?code=XXXX&playerId=YYY&playerName=ZZZ` — real-time game sync
 
+## WebSocket Message Protocol
+
+All messages are JSON. Server relays all client messages to all other room members.
+
+### Client → Server (then broadcast to others)
+- `{type: "game_started", questions: [...], players: [...]}` — host starts game
+- `{type: "score_update", playerId, score}` — player score update
+- `{type: "player_finished", playerId, finalScore}` — player done
+
+### Server → Client (events)
+- `{type: "connected", roomCode, playerId, playerCount}` — on WebSocket connect
+- `{type: "playerJoined", playerId, playerName, playerCount}` — new player joined
+- `{type: "playerLeft", playerId, playerName, playerCount}` — player disconnected
+
 ## DB Schema
 
-- `rooms` table: code, status, host_name, guest_name, question_count, custom_questions, created_at
+- `rooms` table: `code (PK)`, `status`, `host_name`, `max_players`, `players (JSONB)`, `question_count`, `custom_questions (JSONB)`, `created_at`
+
+## Game Modes Detail
+
+### Online Room Flow
+1. Host creates room → gets 4-digit code
+2. Host connects to WebSocket lobby, waits for players
+3. Guests join via code (REST) then connect WebSocket
+4. Host clicks "Start" → sends `game_started` with questions via WebSocket
+5. All players see same questions simultaneously (local timers)
+6. Players send `score_update` events, everyone sees live scores
+7. Results screen shows all players ranked
+
+### Matchmaking Flow
+1. Player 1 calls `POST /api/matchmaking/queue` → `{status: "queued"}`
+2. Player 2 calls same → `{status: "matched", roomCode, isHost: true}` (Player 2 starts game)
+3. Player 1 re-polls → `{status: "matched", roomCode, isHost: false}`
+4. Player 2 connects WebSocket, waits 2.5s, sends `game_started`
+5. Player 1 receives `game_started`, both navigate to game
 
 ## TypeScript & Composite Projects
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references.
+After running codegen (`pnpm --filter @workspace/api-spec run codegen`), rebuild declarations:
+```bash
+cd lib/api-client-react && npx tsc --build
+cd lib/api-zod && npx tsc --build
+cd lib/db && npx tsc --build
+```
 
 ## Root Scripts
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
-
-## Packages
-
-### `artifacts/api-server` (`@workspace/api-server`)
-
-Express 5 API server with WebSocket support. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
-
-### `artifacts/islamic-quiz` (`@workspace/islamic-quiz`)
-
-React + Vite Arabic Islamic quiz game. Main app served at `/`.
-
-### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL.
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`.
+- `pnpm run build` — typecheck then build all packages
+- `pnpm run typecheck` — tsc build with project references
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API client from OpenAPI spec
+- `pnpm --filter @workspace/db run push` — push DB schema changes

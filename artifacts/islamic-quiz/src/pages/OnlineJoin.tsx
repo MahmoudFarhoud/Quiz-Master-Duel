@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useJoinRoom } from "@workspace/api-client-react";
 import { useGameStore, PLAYER_COLORS, OnlinePlayer } from "@/lib/store";
-
-const AVATAR_COLORS = ['#3b82f6','#f97316','#10b981','#a855f7','#ef4444','#06b6d4','#ec4899','#eab308'];
 import { useWebSocket } from "@/hooks/use-websocket";
 import { Question } from "@/data/questions";
+
+const AVATAR_COLORS = ['#3b82f6','#f97316','#10b981','#a855f7','#ef4444','#06b6d4','#ec4899','#eab308'];
 
 export default function OnlineJoin() {
   const [, setLocation] = useLocation();
@@ -23,7 +23,7 @@ export default function OnlineJoin() {
   const joinMutation = useJoinRoom();
   const initOnline = useGameStore(s => s.initOnline);
 
-  const { emit, on, connected } = useWebSocket(
+  const { on, connected } = useWebSocket(
     joinedRoom?.code ?? null,
     myId.current,
     name
@@ -31,8 +31,6 @@ export default function OnlineJoin() {
 
   useEffect(() => {
     if (!joinedRoom) return;
-
-    // Add myself to lobby
     setLobbyPlayers([{ id: myId.current, name }]);
 
     on("playerJoined", (msg) => {
@@ -63,7 +61,7 @@ export default function OnlineJoin() {
     joinMutation.mutate(
       { code: code.trim(), data: { guestName: name, playerId: myId.current } },
       {
-        onSuccess: (data) => {
+        onSuccess: (data: any) => {
           setJoinedRoom({ code: data.code, hostName: data.hostName, maxPlayers: data.maxPlayers });
         },
         onError: (err: any) => {
@@ -73,7 +71,6 @@ export default function OnlineJoin() {
     );
   };
 
-  // In lobby — waiting for host to start
   if (joinedRoom) {
     return (
       <div className="min-h-screen bg-background p-6 flex flex-col max-w-xl mx-auto">
@@ -95,11 +92,16 @@ export default function OnlineJoin() {
             <div className="space-y-2">
               {lobbyPlayers.map((p, i) => (
                 <div key={p.id} className="flex items-center gap-3 bg-muted rounded-xl p-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm bg-${PLAYER_COLORS[i % PLAYER_COLORS.length]}-500`}>
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                    style={{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+                  >
                     {p.name[0]}
                   </div>
                   <span className="font-medium">{p.name}</span>
-                  {p.id === myId.current && <span className="mr-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">أنت</span>}
+                  {p.id === myId.current && (
+                    <span className="mr-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">أنت</span>
+                  )}
                 </div>
               ))}
             </div>

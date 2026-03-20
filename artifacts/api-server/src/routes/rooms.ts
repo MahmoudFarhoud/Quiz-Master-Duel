@@ -1,10 +1,10 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { db } from "@workspace/db";
 import { roomsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { CreateRoomBody, JoinRoomParams, GetRoomParams } from "@workspace/api-zod";
 
-const router: IRouter = Router();
+const router = Router();
 
 function generateCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -24,7 +24,7 @@ function toRoomResponse(room: typeof roomsTable.$inferSelect) {
   };
 }
 
-router.post("/", async (req, res) => {
+router.post("/", async (req, res): Promise<void> => {
   try {
     const body = CreateRoomBody.parse(req.body);
     let code = generateCode();
@@ -48,36 +48,45 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.get("/:code", async (req, res) => {
+router.get("/:code", async (req, res): Promise<void> => {
   try {
     const { code } = GetRoomParams.parse(req.params);
     const [room] = await db.select().from(roomsTable).where(eq(roomsTable.code, code)).limit(1);
-    if (!room) return res.status(404).json({ error: "الغرفة مش موجودة" });
+    if (!room) {
+      res.status(404).json({ error: "الغرفة مش موجودة" });
+      return;
+    }
     res.json(toRoomResponse(room));
   } catch (err: any) {
     res.status(400).json({ error: err.message ?? "Bad request" });
   }
 });
 
-router.post("/:code/join", async (req, res) => {
+router.post("/:code/join", async (req, res): Promise<void> => {
   try {
     const { code } = JoinRoomParams.parse(req.params);
     const body = req.body as { guestName: string; playerId?: string };
 
     if (!body.guestName?.trim()) {
-      return res.status(400).json({ error: "الاسم مطلوب" });
+      res.status(400).json({ error: "الاسم مطلوب" });
+      return;
     }
 
     const [room] = await db.select().from(roomsTable).where(eq(roomsTable.code, code)).limit(1);
-    if (!room) return res.status(404).json({ error: "الغرفة مش موجودة" });
+    if (!room) {
+      res.status(404).json({ error: "الغرفة مش موجودة" });
+      return;
+    }
 
     const players = (room.players as any[]) ?? [];
 
     if (players.length >= room.maxPlayers) {
-      return res.status(400).json({ error: "الغرفة ممتلية" });
+      res.status(400).json({ error: "الغرفة ممتلية" });
+      return;
     }
     if (room.status === "playing") {
-      return res.status(400).json({ error: "اللعبة بدأت بالفعل" });
+      res.status(400).json({ error: "اللعبة بدأت بالفعل" });
+      return;
     }
 
     const newPlayers = [...players, { name: body.guestName, isHost: false, playerId: body.playerId }];
