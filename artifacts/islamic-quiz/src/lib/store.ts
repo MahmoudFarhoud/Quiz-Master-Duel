@@ -11,6 +11,7 @@ export interface OnlinePlayer {
   score: number;
   color: PlayerColor;
   finished: boolean;
+  isHost?: boolean;
 }
 
 export interface Player {
@@ -27,7 +28,7 @@ export interface Player {
 
 interface GameState {
   mode: 'solo' | 'local' | 'online' | null;
-  status: 'setup' | 'playing' | 'round_transition' | 'results';
+  status: 'setup' | 'playing' | 'round_transition' | 'waiting_for_others' | 'results';
 
   // Solo / Local
   players: Player[];
@@ -57,7 +58,7 @@ interface GameState {
 
   // Online-specific
   updateOnlineScore: (playerId: string, score: number) => void;
-  markOnlineFinished: (playerId: string) => void;
+  markOnlineFinished: (playerId: string, score: number) => void;
   addOnlinePlayer: (p: OnlinePlayer) => void;
   removeOnlinePlayer: (playerId: string) => void;
 
@@ -81,6 +82,10 @@ const getRandomQuestions = (count: number, customQs: Question[] = []): Question[
   const selected = pool.slice(0, Math.max(0, count - customQs.length));
   return shuffle([...customQs, ...selected]);
 };
+
+function checkAllFinished(onlinePlayers: OnlinePlayer[]): boolean {
+  return onlinePlayers.length > 0 && onlinePlayers.every(p => p.finished);
+}
 
 export const useGameStore = create<GameState>((set) => ({
   mode: null,
@@ -176,8 +181,11 @@ export const useGameStore = create<GameState>((set) => ({
       return { currentQuestionIndex: nextIndex };
     }
 
-    // Solo or online
     if (nextIndex >= state.questions.length) {
+      // Online: go to waiting, not results
+      if (state.mode === 'online') {
+        return { status: 'waiting_for_others', currentQuestionIndex: nextIndex };
+      }
       return { status: 'results' };
     }
     return {
@@ -209,12 +217,21 @@ export const useGameStore = create<GameState>((set) => ({
     onlinePlayers: state.onlinePlayers.map(p => p.id === playerId ? { ...p, score } : p),
   })),
 
-  markOnlineFinished: (playerId) => set((state) => ({
-    onlinePlayers: state.onlinePlayers.map(p => p.id === playerId ? { ...p, finished: true } : p),
-  })),
+  markOnlineFinished: (playerId, score) => set((state) => {
+    const updated = state.onlinePlayers.map(p =>
+      p.id === playerId ? { ...p, finished: true, score } : p
+    );
+    const allDone = checkAllFinished(updated);
+    return {
+      onlinePlayers: updated,
+      status: allDone ? 'results' : state.status,
+    };
+  }),
 
   addOnlinePlayer: (p) => set((state) => {
-    if (state.onlinePlayers.find(existing => existing.id === p.id)) return {};
+    if (state.onlinePlayers.find(existing => existing.id === p.id)) {
+      return { onlinePlayers: state.onlinePlayers.map(ex => ex.id === p.id ? { ...ex, ...p } : ex) };
+    }
     return { onlinePlayers: [...state.onlinePlayers, p] };
   }),
 

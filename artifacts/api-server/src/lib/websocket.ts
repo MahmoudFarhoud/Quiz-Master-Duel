@@ -6,6 +6,7 @@ interface GameClient {
   roomCode: string;
   playerId: string;
   playerName: string;
+  isHost: boolean;
 }
 
 const clients = new Map<string, GameClient[]>();
@@ -25,6 +26,13 @@ function broadcast(roomCode: string, message: object, excludePlayerId?: string) 
   }
 }
 
+function sendTo(playerId: string, roomCode: string, message: object) {
+  const client = getRoomClients(roomCode).find(c => c.playerId === playerId);
+  if (client && client.ws.readyState === WebSocket.OPEN) {
+    client.ws.send(JSON.stringify(message));
+  }
+}
+
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ server, path: "/api/ws" });
 
@@ -33,36 +41,50 @@ export function setupWebSocket(server: Server) {
     const roomCode = url.searchParams.get("code") ?? "";
     const playerId = url.searchParams.get("playerId") ?? "";
     const playerName = url.searchParams.get("playerName") ?? "";
+    const isHostParam = url.searchParams.get("isHost") === "true";
 
     if (!roomCode || !playerId) {
       ws.close(1008, "Missing code or playerId");
       return;
     }
 
-    const client: GameClient = { ws, roomCode, playerId, playerName };
-
     if (!clients.has(roomCode)) {
       clients.set(roomCode, []);
     }
+
+    // Remove existing connection for same playerId (reconnect)
+    const existing = clients.get(roomCode)!;
+    const oldIdx = existing.findIndex(c => c.playerId === playerId);
+    if (oldIdx !== -1) existing.splice(oldIdx, 1);
+
+    const client: GameClient = { ws, roomCode, playerId, playerName, isHost: isHostParam };
     clients.get(roomCode)!.push(client);
 
+    // Send the new joiner a snapshot of all current players
+    const currentPlayers = getRoomClients(roomCode).map(c => ({
+      id: c.playerId,
+      name: c.playerName,
+      isHost: c.isHost,
+    }));
+    ws.send(JSON.stringify({
+      type: "room_state",
+      players: currentPlayers,
+      playerCount: currentPlayers.length,
+    }));
+
+    // Tell everyone else this player joined
     broadcast(roomCode, {
       type: "playerJoined",
       playerId,
       playerName,
+      isHost: isHostParam,
       playerCount: getRoomClients(roomCode).length,
     }, playerId);
-
-    ws.send(JSON.stringify({
-      type: "connected",
-      roomCode,
-      playerId,
-      playerCount: getRoomClients(roomCode).length,
-    }));
 
     ws.on("message", (raw) => {
       try {
         const msg = JSON.parse(raw.toString());
+        // Relay to all others (exclude sender)
         broadcast(roomCode, { ...msg, fromPlayerId: playerId }, playerId);
       } catch {
         // ignore malformed messages
