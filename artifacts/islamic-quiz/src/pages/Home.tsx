@@ -214,6 +214,11 @@ export default function Home() {
         </Link>
       </motion.div>
 
+      {/* Footer */}
+      <p className="text-center text-xs py-3 shrink-0" style={{ color: "rgba(212,168,71,0.45)", fontFamily: "'Amiri', serif" }}>
+        تصميم محمود فرهود
+      </p>
+
       {/* Arabesque bottom border */}
       <div className="w-full h-2 shrink-0" style={{ background: "linear-gradient(90deg, transparent, #d4a847, #f5c842, #d4a847, transparent)" }} />
     </div>
