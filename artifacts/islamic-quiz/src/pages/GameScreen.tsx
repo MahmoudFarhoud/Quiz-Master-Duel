@@ -24,7 +24,7 @@ export default function GameScreen() {
   const [, setLocation] = useLocation();
   const {
     status, players, onlinePlayers, currentTurn, questions, currentQuestionIndex,
-    mode, answerQuestion, nextQuestion, useLifeline, startNextRound,
+    mode, isFreePlay, answerQuestion, nextQuestion, useLifeline, startNextRound, endGame,
     myPlayerId, roomCode, myPlayerName, isHost,
     updateOnlineScore, markOnlineFinished,
   } = useGameStore();
@@ -138,6 +138,10 @@ export default function GameScreen() {
     }
 
     setTimeout(() => {
+      if (isFreePlay && !isCorrect) {
+        endGame();
+        return;
+      }
       if (isOnlineMode && currentQuestionIndex + 1 >= questions.length) {
         const store = useGameStore.getState();
         const myP = store.onlinePlayers.find(p => p.id === myPlayerId);

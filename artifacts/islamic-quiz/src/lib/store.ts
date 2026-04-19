@@ -28,6 +28,7 @@ export interface Player {
 
 interface GameState {
   mode: 'solo' | 'local' | 'online' | null;
+  isFreePlay: boolean;
   status: 'setup' | 'playing' | 'round_transition' | 'waiting_for_others' | 'results';
 
   players: Player[];
@@ -43,7 +44,7 @@ interface GameState {
   roomCode: string | null;
   isHost: boolean;
 
-  initSolo: (count: number, playerName?: string) => void;
+  initSolo: (count: number, playerName?: string, freePlay?: boolean) => void;
   initLocal: (p1Name: string, p2Name: string, count: number, customQs: Question[]) => void;
   initOnline: (opts: { roomCode: string; isHost: boolean; myPlayerId: string; myPlayerName: string; players: OnlinePlayer[]; questions: Question[] }) => void;
 
@@ -80,6 +81,7 @@ const getRandomQuestions = (count: number, customQs: Question[] = []): Question[
 
 export const useGameStore = create<GameState>((set) => ({
   mode: null,
+  isFreePlay: false,
   status: 'setup',
   players: [],
   currentTurn: 0,
@@ -92,13 +94,14 @@ export const useGameStore = create<GameState>((set) => ({
   roomCode: null,
   isHost: false,
 
-  initSolo: (count, playerName = "أنت") => set({
+  initSolo: (count, playerName = "أنت", freePlay = false) => set({
     mode: 'solo',
+    isFreePlay: freePlay,
     status: 'playing',
     players: [{ id: '1', name: playerName, score: 0, color: 'green', lifelines: { ...defaultLifelines } }],
     currentTurn: 0,
     currentRound: 0,
-    questions: getRandomQuestions(count),
+    questions: freePlay ? shuffle([...quizQuestions]) : getRandomQuestions(count),
     currentQuestionIndex: 0,
     onlinePlayers: [],
     myPlayerId: null,
@@ -229,6 +232,7 @@ export const useGameStore = create<GameState>((set) => ({
 
   reset: () => set({
     mode: null,
+    isFreePlay: false,
     status: 'setup',
     players: [],
     currentTurn: 0,
