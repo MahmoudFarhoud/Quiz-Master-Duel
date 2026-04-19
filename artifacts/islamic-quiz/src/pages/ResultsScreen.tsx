@@ -36,6 +36,18 @@ export default function ResultsScreen() {
   const isDraw = isMultiplayer && displayPlayers.length > 1 && displayPlayers[0].score === displayPlayers[1].score;
 
   useEffect(() => {
+    // Play both win sounds simultaneously
+    const audio1 = new Audio(import.meta.env.BASE_URL + "win1.mp3");
+    const audio2 = new Audio(import.meta.env.BASE_URL + "win2.mp3");
+    audio1.play().catch(() => {});
+    audio2.play().catch(() => {});
+    return () => {
+      audio1.pause();
+      audio2.pause();
+    };
+  }, []);
+
+  useEffect(() => {
     const end = Date.now() + 3500;
     const fire = () => {
       confetti({ particleCount: 6, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#10b981', '#fbbf24', '#3b82f6'] });
