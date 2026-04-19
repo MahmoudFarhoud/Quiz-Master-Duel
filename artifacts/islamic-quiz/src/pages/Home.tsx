@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { User, Users, Wifi } from "lucide-react";
 
-const VERSE = "شَهِدَ اللَّهُ أَنَّهُ لَا إِلَٰهَ إِلَّا هُوَ وَالْمَلَائِكَةُ وَأُولُو الْعِلْمِ قَائِمًا بِالْقِسْطِ";
-const VERSE_REF = "سورة آل عمران ﴿١٨﴾";
+const VERSE = "وَمَا تَفْعَلُوا مِنْ خَيْرٍ فَإِنَّ اللَّهَ بِهِ عَلِيمٌ";
+const VERSE_REF = "سورة البقرة ﴿٢١٥﴾";
 
 export default function Home() {
   return (
@@ -32,22 +32,50 @@ export default function Home() {
           className="rounded-2xl px-6 py-5 text-center relative overflow-hidden"
           style={{ background: "linear-gradient(135deg, rgba(212,168,71,0.18) 0%, rgba(212,168,71,0.06) 100%)", border: "1.5px solid rgba(212,168,71,0.45)" }}
         >
-          {/* Decorative quotes */}
-          <span className="absolute top-2 right-4 text-5xl leading-none opacity-20 select-none" style={{ color: "#d4a847", fontFamily: "serif" }}>"</span>
-          <span className="absolute bottom-2 left-4 text-5xl leading-none opacity-20 select-none" style={{ color: "#d4a847", fontFamily: "serif" }}>"</span>
-
+          {/* بسم الله */}
           <p
-            className="text-xl md:text-2xl leading-loose font-bold tracking-wide"
+            className="text-lg md:text-xl font-bold mb-3 tracking-widest"
+            style={{
+              color: "rgba(212,168,71,0.9)",
+              fontFamily: "'Amiri', 'Scheherazade New', 'Traditional Arabic', serif",
+              letterSpacing: "0.05em"
+            }}
+          >
+            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+          </p>
+
+          {/* Divider */}
+          <div className="w-24 h-px mx-auto mb-4" style={{ background: "linear-gradient(90deg, transparent, rgba(212,168,71,0.6), transparent)" }} />
+
+          {/* الآية */}
+          <p
+            className="text-2xl md:text-3xl leading-loose font-bold"
             style={{
               color: "#f0d080",
               fontFamily: "'Amiri', 'Scheherazade New', 'Traditional Arabic', serif",
-              textShadow: "0 0 20px rgba(212,168,71,0.4)"
+              textShadow: "0 0 24px rgba(212,168,71,0.35)"
             }}
           >
             ﴿ {VERSE} ﴾
           </p>
-          <p className="mt-2 text-sm font-medium" style={{ color: "rgba(212,168,71,0.75)" }}>
+
+          {/* المرجع */}
+          <p className="mt-2 mb-3 text-sm font-medium" style={{ color: "rgba(212,168,71,0.7)" }}>
             {VERSE_REF}
+          </p>
+
+          {/* Divider */}
+          <div className="w-24 h-px mx-auto mb-3" style={{ background: "linear-gradient(90deg, transparent, rgba(212,168,71,0.6), transparent)" }} />
+
+          {/* صدق الله العظيم */}
+          <p
+            className="text-base md:text-lg font-bold tracking-wide"
+            style={{
+              color: "rgba(212,168,71,0.85)",
+              fontFamily: "'Amiri', 'Scheherazade New', 'Traditional Arabic', serif"
+            }}
+          >
+            صَدَقَ اللَّهُ الْعَظِيمُ
           </p>
         </div>
       </motion.div>
