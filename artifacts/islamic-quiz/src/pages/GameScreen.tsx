@@ -36,10 +36,23 @@ export default function GameScreen() {
 
   const correctAudioRef = useRef<HTMLAudioElement | null>(null);
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
+  const timerAudioRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     correctAudioRef.current = new Audio(import.meta.env.BASE_URL + "correct.mp3");
     wrongAudioRef.current = new Audio(import.meta.env.BASE_URL + "wrong.mp3");
+    timerAudioRef.current = new Audio(import.meta.env.BASE_URL + "timer.mp3");
+    timerAudioRef.current.loop = true;
+    return () => {
+      timerAudioRef.current?.pause();
+    };
   }, []);
+
+  const stopTimer = () => {
+    if (timerAudioRef.current) {
+      timerAudioRef.current.pause();
+      timerAudioRef.current.currentTime = 0;
+    }
+  };
 
   const { emit, on } = useWebSocket(
     mode === 'online' ? roomCode : null,
@@ -80,6 +93,11 @@ export default function GameScreen() {
     setSelectedOption(null);
     setHiddenOptions([]);
     setShowResult(false);
+    // Start timer sound for each new question
+    if (timerAudioRef.current && status === 'playing') {
+      timerAudioRef.current.currentTime = 0;
+      timerAudioRef.current.play().catch(() => {});
+    }
   }, [currentQuestionIndex]);
 
   useEffect(() => {
@@ -98,6 +116,9 @@ export default function GameScreen() {
     setShowResult(true);
     const isCorrect = option === currentQ.correct_answer;
     answerQuestion(isCorrect);
+
+    // Stop timer sound
+    stopTimer();
 
     // Play sound based on answer
     if (isCorrect && correctAudioRef.current) {
@@ -139,6 +160,7 @@ export default function GameScreen() {
   const handleSkip = () => {
     if (!currentPlayer?.lifelines.skip) return;
     useLifeline('skip');
+    stopTimer();
     nextQuestion();
   };
 
