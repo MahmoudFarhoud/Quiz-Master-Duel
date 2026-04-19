@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useGameStore, PlayerColor } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, Clock, FastForward, CheckCircle2, XCircle, Play, Users } from "lucide-react";
+import { HelpCircle, Clock, FastForward, CheckCircle2, XCircle, Play, Users, CheckCheck, Loader2 } from "lucide-react";
 import { quizQuestions } from "@/data/questions";
 import { useWebSocket } from "@/hooks/use-websocket";
 
@@ -18,13 +18,15 @@ const COLOR_MAP: Record<PlayerColor, string> = {
   yellow: "from-yellow-500 to-yellow-800",
 };
 
+const AVATAR_COLORS = ['#3b82f6','#f97316','#10b981','#a855f7','#ef4444','#06b6d4','#ec4899','#eab308'];
+
 export default function GameScreen() {
   const [, setLocation] = useLocation();
   const {
     status, players, onlinePlayers, currentTurn, questions, currentQuestionIndex,
     mode, answerQuestion, nextQuestion, useLifeline, startNextRound,
-    myPlayerId, roomCode, myPlayerName,
-    updateOnlineScore, markOnlineFinished, endGame,
+    myPlayerId, roomCode, myPlayerName, isHost,
+    updateOnlineScore, markOnlineFinished,
   } = useGameStore();
 
   const [timeLeft, setTimeLeft] = useState(10);
@@ -32,32 +34,34 @@ export default function GameScreen() {
   const [hiddenOptions, setHiddenOptions] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
 
-  // Online WebSocket
+  const correctAudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    correctAudioRef.current = new Audio(import.meta.env.BASE_URL + "correct.mp3");
+  }, []);
+
   const { emit, on } = useWebSocket(
     mode === 'online' ? roomCode : null,
     myPlayerId,
-    myPlayerName
+    myPlayerName,
+    isHost
   );
 
-  // Setup online WebSocket listeners
   useEffect(() => {
     if (mode !== 'online') return;
     on("score_update", (msg) => {
       updateOnlineScore(msg.playerId, msg.score);
     });
     on("player_finished", (msg) => {
-      markOnlineFinished(msg.playerId);
+      markOnlineFinished(msg.playerId, msg.finalScore ?? 0);
     });
   }, [mode]);
 
-  // Fallback if accessed directly with no game loaded
   useEffect(() => {
     if (status === 'setup' || questions.length === 0) {
       useGameStore.getState().initSolo(10);
     }
   }, []);
 
-  // Handle navigation to results
   useEffect(() => {
     if (status === 'results') {
       setLocation("/results");
@@ -69,7 +73,6 @@ export default function GameScreen() {
   const isLocalMode = mode === 'local';
   const isOnlineMode = mode === 'online';
 
-  // Reset state on new question
   useEffect(() => {
     setTimeLeft(currentQ?.duration_seconds || 10);
     setSelectedOption(null);
@@ -77,9 +80,8 @@ export default function GameScreen() {
     setShowResult(false);
   }, [currentQuestionIndex]);
 
-  // Timer logic
   useEffect(() => {
-    if (showResult || status === 'round_transition') return;
+    if (showResult || status === 'round_transition' || status === 'waiting_for_others') return;
     if (timeLeft <= 0) {
       handleAnswer(null);
       return;
@@ -95,21 +97,30 @@ export default function GameScreen() {
     const isCorrect = option === currentQ.correct_answer;
     answerQuestion(isCorrect);
 
-    // Online: broadcast score update
+    // Play sound on correct answer
+    if (isCorrect && correctAudioRef.current) {
+      correctAudioRef.current.currentTime = 0;
+      correctAudioRef.current.play().catch(() => {});
+    }
+
     if (isOnlineMode && myPlayerId) {
-      const myOnlinePlayer = onlinePlayers.find(p => p.id === myPlayerId);
-      const newScore = (myOnlinePlayer?.score ?? 0) + (isCorrect ? 1 : 0);
+      const store = useGameStore.getState();
+      const myP = store.onlinePlayers.find(p => p.id === myPlayerId);
+      const newScore = (myP?.score ?? 0) + (isCorrect ? 1 : 0);
       emit({ type: "score_update", playerId: myPlayerId, score: newScore });
     }
 
     setTimeout(() => {
-      const store = useGameStore.getState();
-      // Check if this is the last question in online mode
       if (isOnlineMode && currentQuestionIndex + 1 >= questions.length) {
-        const myOnlinePlayer = store.onlinePlayers.find(p => p.id === myPlayerId);
-        emit({ type: "player_finished", playerId: myPlayerId, finalScore: myOnlinePlayer?.score ?? 0 });
+        const store = useGameStore.getState();
+        const myP = store.onlinePlayers.find(p => p.id === myPlayerId);
+        const finalScore = myP?.score ?? 0;
+        emit({ type: "player_finished", playerId: myPlayerId, finalScore });
+        markOnlineFinished(myPlayerId!, finalScore);
+        nextQuestion();
+      } else {
+        nextQuestion();
       }
-      nextQuestion();
     }, 1800);
   };
 
@@ -134,7 +145,7 @@ export default function GameScreen() {
 
   if (!currentPlayer) return null;
 
-  // ── Round Transition Screen (Local Mode) ──
+  // ── Round Transition Screen (Local) ──
   if (status === 'round_transition') {
     const nextPlayer = players[1];
     return (
@@ -168,10 +179,94 @@ export default function GameScreen() {
     );
   }
 
+  // ── Waiting for Others Screen (Online) ──
+  if (status === 'waiting_for_others') {
+    const myOnlinePlayer = onlinePlayers.find(p => p.id === myPlayerId);
+    const finishedCount = onlinePlayers.filter(p => p.finished).length;
+    const totalCount = onlinePlayers.length;
+
+    return (
+      <div className={`min-h-screen bg-gradient-to-br ${COLOR_MAP[myOnlinePlayer?.color ?? 'green']} flex flex-col items-center justify-center text-white p-6`}>
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", bounce: 0.3 }}
+          className="w-full max-w-md"
+        >
+          {/* My result */}
+          <div className="text-center mb-8">
+            <div className="text-7xl mb-4">✅</div>
+            <h1 className="text-3xl font-black mb-2">انتهيت!</h1>
+            <div className="bg-white/20 rounded-2xl px-8 py-4 inline-block">
+              <span className="text-xl font-bold">نتيجتك: </span>
+              <span className="text-4xl font-black">{myOnlinePlayer?.score ?? 0}</span>
+              <span className="text-lg opacity-70"> / {questions.length}</span>
+            </div>
+          </div>
+
+          {/* Waiting status */}
+          <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-bold text-lg flex items-center gap-2">
+                <Users className="w-5 h-5" /> حالة اللاعبين
+              </h2>
+              <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-bold">
+                {finishedCount} / {totalCount} انتهوا
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <AnimatePresence>
+                {onlinePlayers
+                  .slice()
+                  .sort((a, b) => (b.finished ? 1 : 0) - (a.finished ? 1 : 0))
+                  .map((p, i) => (
+                  <motion.div
+                    key={p.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`flex items-center gap-3 rounded-2xl p-4 ${p.finished ? 'bg-green-500/30 border border-green-400/40' : 'bg-white/10 border border-white/10'}`}
+                  >
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-white font-black text-sm shrink-0"
+                      style={{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+                    >
+                      {p.name[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold truncate flex items-center gap-1">
+                        {p.name}
+                        {p.id === myPlayerId && <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded-full font-normal">أنت</span>}
+                      </div>
+                      {p.finished && (
+                        <div className="text-sm opacity-80">{p.score} نقطة</div>
+                      )}
+                    </div>
+                    <div className="shrink-0">
+                      {p.finished ? (
+                        <CheckCheck className="w-5 h-5 text-green-300" />
+                      ) : (
+                        <Loader2 className="w-5 h-5 animate-spin opacity-60" />
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {finishedCount < totalCount && (
+              <p className="text-center text-white/60 text-sm mt-4">
+                في انتظار {totalCount - finishedCount} لاعب...
+              </p>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   const totalDuration = currentQ?.duration_seconds || 10;
   const timerPercent = timeLeft / totalDuration;
-
-  // Online: show live scoreboard in header
   const scoreboardPlayers = isOnlineMode ? onlinePlayers : players;
 
   return (
@@ -198,17 +293,12 @@ export default function GameScreen() {
         )}
 
         <div className="flex gap-3 shrink-0 flex-wrap justify-end">
-          {scoreboardPlayers.map(p => {
-            const isMe = isOnlineMode ? p.id === myPlayerId : true;
-            const score = p.score;
-            const pName = p.name;
-            return (
-              <div key={p.id} className={`text-center transition-opacity ${!isLocalMode || (p as any).id === currentPlayer.id ? '' : 'opacity-40'}`}>
-                <div className="text-xs opacity-70 mb-0.5 max-w-[60px] truncate">{pName}</div>
-                <div className="font-black text-2xl">{score}</div>
-              </div>
-            );
-          })}
+          {scoreboardPlayers.map(p => (
+            <div key={p.id} className={`text-center transition-opacity ${!isLocalMode || (p as any).id === currentPlayer.id ? '' : 'opacity-40'}`}>
+              <div className="text-xs opacity-70 mb-0.5 max-w-[60px] truncate">{p.name}</div>
+              <div className="font-black text-2xl">{p.score}</div>
+            </div>
+          ))}
         </div>
       </header>
 

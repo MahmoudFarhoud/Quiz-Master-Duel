@@ -2,16 +2,17 @@ import { useState, useRef, useEffect, useCallback } from "react";
 
 export type WsMessage = { type: string; [key: string]: any };
 
-const getWsUrl = (code: string, playerId: string, playerName: string) => {
+const getWsUrl = (code: string, playerId: string, playerName: string, isHost = false) => {
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = window.location.host;
-  return `${proto}//${host}/api/ws?code=${encodeURIComponent(code)}&playerId=${encodeURIComponent(playerId)}&playerName=${encodeURIComponent(playerName)}`;
+  return `${proto}//${host}/api/ws?code=${encodeURIComponent(code)}&playerId=${encodeURIComponent(playerId)}&playerName=${encodeURIComponent(playerName)}&isHost=${isHost}`;
 };
 
 export function useWebSocket(
   roomCode: string | null | undefined,
   playerId: string | null | undefined,
-  playerName: string | null | undefined
+  playerName: string | null | undefined,
+  isHost = false
 ) {
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -21,13 +22,12 @@ export function useWebSocket(
   useEffect(() => {
     if (!roomCode || !playerId || !playerName) return;
 
-    const url = getWsUrl(roomCode, playerId, playerName);
+    const url = getWsUrl(roomCode, playerId, playerName, isHost);
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setConnected(true);
-      // Flush pending messages
       for (const msg of pendingRef.current) {
         ws.send(JSON.stringify(msg));
       }
@@ -39,7 +39,6 @@ export function useWebSocket(
         const msg: WsMessage = JSON.parse(evt.data);
         const handler = handlersRef.current.get(msg.type);
         if (handler) handler(msg);
-        // Also fire the wildcard handler
         const wildcard = handlersRef.current.get("*");
         if (wildcard) wildcard(msg);
       } catch {
@@ -61,7 +60,7 @@ export function useWebSocket(
       wsRef.current = null;
       setConnected(false);
     };
-  }, [roomCode, playerId, playerName]);
+  }, [roomCode, playerId, playerName, isHost]);
 
   const emit = useCallback((msg: WsMessage) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {

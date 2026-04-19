@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, Link } from "wouter";
-import { ArrowRight, Loader2, Copy, CheckCircle, Users, Play, Plus, List } from "lucide-react";
+import { ArrowRight, Loader2, Copy, CheckCircle, Users, Play, Plus, List, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCreateRoom } from "@workspace/api-client-react";
@@ -30,29 +30,46 @@ export default function OnlineHost() {
   const [maxPlayers, setMaxPlayers] = useState(2);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [lobbyPlayers, setLobbyPlayers] = useState<{ id: string; name: string }[]>([]);
+  const [lobbyPlayers, setLobbyPlayers] = useState<{ id: string; name: string; isHost?: boolean }[]>([]);
   const [customQuestions, setCustomQuestions] = useState<Question[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const myId = useRef("host_" + Date.now());
   const createMutation = useCreateRoom();
   const initOnline = useGameStore(s => s.initOnline);
-  const { emit, on, connected } = useWebSocket(roomCode, myId.current, name);
+  const { emit, on, connected } = useWebSocket(roomCode, myId.current, name, true);
 
   useEffect(() => {
     if (!roomCode) return;
-    setLobbyPlayers([{ id: myId.current, name }]);
 
+    // room_state: server sends snapshot of all current players (including ourselves)
+    on("room_state", (msg) => {
+      const players: { id: string; name: string; isHost?: boolean }[] = msg.players ?? [];
+      setLobbyPlayers(players);
+    });
+
+    // Someone new joined
     on("playerJoined", (msg) => {
       setLobbyPlayers(prev => {
         if (prev.find(p => p.id === msg.playerId)) return prev;
-        return [...prev, { id: msg.playerId, name: msg.playerName }];
+        return [...prev, { id: msg.playerId, name: msg.playerName, isHost: msg.isHost ?? false }];
       });
     });
+
     on("playerLeft", (msg) => {
       setLobbyPlayers(prev => prev.filter(p => p.id !== msg.playerId));
     });
   }, [roomCode]);
+
+  // Once connected, make sure I'm in the lobby
+  useEffect(() => {
+    if (connected && roomCode) {
+      setLobbyPlayers(prev => {
+        if (prev.find(p => p.id === myId.current)) return prev;
+        return [{ id: myId.current, name, isHost: true }, ...prev];
+      });
+    }
+  }, [connected, roomCode]);
 
   const handleCreate = () => {
     if (!name.trim()) return;
@@ -84,6 +101,7 @@ export default function OnlineHost() {
       score: 0,
       color: PLAYER_COLORS[i % PLAYER_COLORS.length],
       finished: false,
+      isHost: p.isHost,
     }));
 
     emit({ type: "game_started", questions: qs, players });
@@ -214,8 +232,15 @@ export default function OnlineHost() {
                   >
                     {p.name[0]}
                   </div>
-                  <span className="font-medium">{p.name}</span>
-                  {p.id === myId.current && <span className="mr-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">أنت (المضيف)</span>}
+                  <span className="font-medium flex-1">{p.name}</span>
+                  {p.isHost && (
+                    <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Crown className="w-3 h-3" /> مضيف
+                    </span>
+                  )}
+                  {p.id === myId.current && (
+                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">أنت</span>
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>

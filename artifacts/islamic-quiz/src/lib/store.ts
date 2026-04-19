@@ -30,23 +30,19 @@ interface GameState {
   mode: 'solo' | 'local' | 'online' | null;
   status: 'setup' | 'playing' | 'round_transition' | 'waiting_for_others' | 'results';
 
-  // Solo / Local
   players: Player[];
   currentTurn: number;
   currentRound: number;
 
-  // Online simultaneous
   myPlayerId: string | null;
   myPlayerName: string | null;
   onlinePlayers: OnlinePlayer[];
 
-  // Shared
   questions: Question[];
   currentQuestionIndex: number;
   roomCode: string | null;
   isHost: boolean;
 
-  // Actions
   initSolo: (count: number, playerName?: string) => void;
   initLocal: (p1Name: string, p2Name: string, count: number, customQs: Question[]) => void;
   initOnline: (opts: { roomCode: string; isHost: boolean; myPlayerId: string; myPlayerName: string; players: OnlinePlayer[]; questions: Question[] }) => void;
@@ -56,7 +52,6 @@ interface GameState {
   nextQuestion: () => void;
   startNextRound: () => void;
 
-  // Online-specific
   updateOnlineScore: (playerId: string, score: number) => void;
   markOnlineFinished: (playerId: string, score: number) => void;
   addOnlinePlayer: (p: OnlinePlayer) => void;
@@ -82,10 +77,6 @@ const getRandomQuestions = (count: number, customQs: Question[] = []): Question[
   const selected = pool.slice(0, Math.max(0, count - customQs.length));
   return shuffle([...customQs, ...selected]);
 };
-
-function checkAllFinished(onlinePlayers: OnlinePlayer[]): boolean {
-  return onlinePlayers.length > 0 && onlinePlayers.every(p => p.finished);
-}
 
 export const useGameStore = create<GameState>((set) => ({
   mode: null,
@@ -182,18 +173,13 @@ export const useGameStore = create<GameState>((set) => ({
     }
 
     if (nextIndex >= state.questions.length) {
-      // Online: go to waiting, not results
+      // Solo → results; Online → just advance index (markOnlineFinished handles status)
       if (state.mode === 'online') {
-        return { status: 'waiting_for_others', currentQuestionIndex: nextIndex };
+        return { currentQuestionIndex: nextIndex };
       }
       return { status: 'results' };
     }
-    return {
-      currentQuestionIndex: nextIndex,
-      currentTurn: state.mode !== 'online' && state.players.length > 1
-        ? (state.currentTurn === 0 ? 1 : 0)
-        : 0
-    };
+    return { currentQuestionIndex: nextIndex };
   }),
 
   startNextRound: () => set((state) => ({
@@ -221,10 +207,10 @@ export const useGameStore = create<GameState>((set) => ({
     const updated = state.onlinePlayers.map(p =>
       p.id === playerId ? { ...p, finished: true, score } : p
     );
-    const allDone = checkAllFinished(updated);
+    const allDone = updated.length > 0 && updated.every(p => p.finished);
     return {
       onlinePlayers: updated,
-      status: allDone ? 'results' : state.status,
+      status: allDone ? 'results' : 'waiting_for_others',
     };
   }),
 

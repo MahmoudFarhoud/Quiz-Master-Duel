@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, Link } from "wouter";
-import { ArrowRight, Loader2, LogIn, Users } from "lucide-react";
+import { ArrowRight, Loader2, LogIn, Users, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useJoinRoom } from "@workspace/api-client-react";
@@ -16,7 +16,7 @@ export default function OnlineJoin() {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [joinedRoom, setJoinedRoom] = useState<{ code: string; hostName: string; maxPlayers: number } | null>(null);
-  const [lobbyPlayers, setLobbyPlayers] = useState<{ id: string; name: string }[]>([]);
+  const [lobbyPlayers, setLobbyPlayers] = useState<{ id: string; name: string; isHost?: boolean }[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const myId = useRef("guest_" + Date.now());
@@ -26,20 +26,33 @@ export default function OnlineJoin() {
   const { on, connected } = useWebSocket(
     joinedRoom?.code ?? null,
     myId.current,
-    name
+    name,
+    false
   );
 
   useEffect(() => {
     if (!joinedRoom) return;
-    setLobbyPlayers([{ id: myId.current, name }]);
 
+    // room_state: full snapshot of all current players in the room
+    on("room_state", (msg) => {
+      const players: { id: string; name: string; isHost?: boolean }[] = msg.players ?? [];
+      setLobbyPlayers(players);
+    });
+
+    // Someone new joined after us
     on("playerJoined", (msg) => {
       setLobbyPlayers(prev => {
         if (prev.find(p => p.id === msg.playerId)) return prev;
-        return [...prev, { id: msg.playerId, name: msg.playerName }];
+        return [...prev, { id: msg.playerId, name: msg.playerName, isHost: msg.isHost }];
       });
     });
 
+    // Someone left
+    on("playerLeft", (msg) => {
+      setLobbyPlayers(prev => prev.filter(p => p.id !== msg.playerId));
+    });
+
+    // Host started the game
     on("game_started", (msg) => {
       const players: OnlinePlayer[] = msg.players ?? [];
       const questions: Question[] = msg.questions ?? [];
@@ -79,31 +92,61 @@ export default function OnlineJoin() {
         </div>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          {/* Room info */}
           <div className="bg-card rounded-3xl p-6 border shadow-sm text-center">
             <div className="text-4xl mb-3">🎮</div>
             <h2 className="text-xl font-bold mb-1">انضممت للغرفة!</h2>
-            <p className="text-muted-foreground">كود الغرفة: <span className="font-black text-primary text-xl tracking-widest">{joinedRoom.code}</span></p>
+            <p className="text-muted-foreground">
+              كود الغرفة: <span className="font-black text-primary text-xl tracking-widest">{joinedRoom.code}</span>
+            </p>
           </div>
 
+          {/* Players lobby */}
           <div className="bg-card rounded-3xl p-6 border shadow-sm">
-            <h2 className="font-bold text-lg flex items-center gap-2 mb-4">
-              <Users className="w-5 h-5 text-primary" /> اللاعبون في الغرفة
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-bold text-lg flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" /> اللاعبون في الغرفة
+              </h2>
+              <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-bold text-sm">
+                {lobbyPlayers.length} / {joinedRoom.maxPlayers}
+              </span>
+            </div>
+
             <div className="space-y-2">
-              {lobbyPlayers.map((p, i) => (
-                <div key={p.id} className="flex items-center gap-3 bg-muted rounded-xl p-3">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                    style={{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+              <AnimatePresence>
+                {lobbyPlayers.map((p, i) => (
+                  <motion.div
+                    key={p.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="flex items-center gap-3 bg-muted rounded-xl p-3"
                   >
-                    {p.name[0]}
-                  </div>
-                  <span className="font-medium">{p.name}</span>
-                  {p.id === myId.current && (
-                    <span className="mr-auto text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">أنت</span>
-                  )}
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                      style={{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }}
+                    >
+                      {p.name[0]}
+                    </div>
+                    <span className="font-medium flex-1">{p.name}</span>
+                    {p.isHost && (
+                      <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Crown className="w-3 h-3" /> مضيف
+                      </span>
+                    )}
+                    {p.id === myId.current && (
+                      <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">أنت</span>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {lobbyPlayers.length === 0 && (
+                <div className="flex items-center gap-2 text-muted-foreground p-3">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">جاري الاتصال...</span>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
