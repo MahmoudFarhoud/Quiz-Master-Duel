@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useGameStore, PlayerColor } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, Clock, FastForward, CheckCircle2, XCircle, Play, Users, CheckCheck, Loader2 } from "lucide-react";
+import { HelpCircle, Clock, FastForward, CheckCircle2, XCircle, Play, Users, CheckCheck, Loader2, LogOut } from "lucide-react";
 import { quizQuestions } from "@/data/questions";
 import { useWebSocket } from "@/hooks/use-websocket";
 
@@ -33,6 +33,7 @@ export default function GameScreen() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [hiddenOptions, setHiddenOptions] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const correctAudioRef = useRef<HTMLAudioElement | null>(null);
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -148,6 +149,14 @@ export default function GameScreen() {
         nextQuestion();
       }
     }, 1800);
+  };
+
+  const handleExit = () => {
+    stopTimer();
+    correctAudioRef.current?.pause();
+    wrongAudioRef.current?.pause();
+    useGameStore.getState().reset();
+    setLocation("/");
   };
 
   const handleFiftyFifty = () => {
@@ -299,6 +308,47 @@ export default function GameScreen() {
   return (
     <div className={`min-h-screen transition-colors duration-700 bg-gradient-to-br ${COLOR_MAP[currentPlayer.color]} p-4 md:p-8 flex flex-col text-white`}>
 
+      {/* Exit Confirmation Modal */}
+      <AnimatePresence>
+        {showExitConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6"
+            style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              transition={{ type: "spring", bounce: 0.35 }}
+              className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+            >
+              <div className="text-5xl mb-4">🚪</div>
+              <h2 className="text-2xl font-black mb-2">خروج من الجولة؟</h2>
+              <p className="text-white/70 mb-8 text-sm leading-relaxed">
+                سيتم إنهاء اللعبة الحالية وستضيع نتيجتك
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowExitConfirm(false)}
+                  className="flex-1 h-12 rounded-2xl font-bold text-base bg-white/15 hover:bg-white/25 border border-white/20 transition-all"
+                >
+                  استمر
+                </button>
+                <button
+                  onClick={handleExit}
+                  className="flex-1 h-12 rounded-2xl font-bold text-base bg-red-500/80 hover:bg-red-500 border border-red-400/50 transition-all"
+                >
+                  اخرج
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <header className="flex justify-between items-center mb-6 bg-black/20 backdrop-blur-md rounded-2xl p-4 shadow-lg gap-3 flex-wrap">
         <div className="font-bold text-lg shrink-0">
@@ -319,13 +369,20 @@ export default function GameScreen() {
           </div>
         )}
 
-        <div className="flex gap-3 shrink-0 flex-wrap justify-end">
+        <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end">
           {scoreboardPlayers.map(p => (
             <div key={p.id} className={`text-center transition-opacity ${!isLocalMode || (p as any).id === currentPlayer.id ? '' : 'opacity-40'}`}>
               <div className="text-xs opacity-70 mb-0.5 max-w-[60px] truncate">{p.name}</div>
               <div className="font-black text-2xl">{p.score}</div>
             </div>
           ))}
+          <button
+            onClick={() => setShowExitConfirm(true)}
+            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-red-500/60 border border-white/20 flex items-center justify-center transition-all shrink-0"
+            title="خروج"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
