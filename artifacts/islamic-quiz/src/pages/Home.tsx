@@ -215,8 +215,8 @@ export default function Home() {
       </motion.div>
 
       {/* Footer */}
-      <p className="text-center text-xs py-3 shrink-0" style={{ color: "rgba(212,168,71,0.45)", fontFamily: "'Amiri', serif" }}>
-        تصميم محمود فرهود
+      <p className="text-center text-sm py-4 shrink-0 tracking-wide" style={{ color: "rgba(212,168,71,0.8)", fontFamily: "'Amiri', 'Scheherazade New', serif", textShadow: "0 0 12px rgba(212,168,71,0.3)" }}>
+        ✦ تصميم محمود فرهود ✦
       </p>
 
       {/* Arabesque bottom border */}
