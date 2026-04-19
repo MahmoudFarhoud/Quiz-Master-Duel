@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { User, Users, Wifi } from "lucide-react";
 
-const VERSE = "وَمَا تَفْعَلُوا مِنْ خَيْرٍ فَإِنَّ اللَّهَ بِهِ عَلِيمٌ";
-const VERSE_REF = "سورة البقرة ﴿٢١٥﴾";
+const VERSE = "شَهِدَ اللَّهُ أَنَّهُ لَا إِلَٰهَ إِلَّا هُوَ وَالْمَلَائِكَةُ وَأُولُو الْعِلْمِ قَائِمًا بِالْقِسْطِ";
+const VERSE_REF = "سورة آل عمران ﴿١٨﴾";
 
 export default function Home() {
   return (
