@@ -1,71 +1,193 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { User, Users, WifiOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { User, Users, Wifi } from "lucide-react";
+
+const VERSE = "شَهِدَ اللَّهُ أَنَّهُ لَا إِلَٰهَ إِلَّا هُوَ وَالْمَلَائِكَةُ وَأُولُو الْعِلْمِ قَائِمًا بِالْقِسْطِ";
+const VERSE_REF = "سورة آل عمران ﴿١٨﴾";
 
 export default function Home() {
   return (
-    <div className="min-h-screen relative flex flex-col items-center justify-center overflow-hidden p-6">
-      {/* Background Image & Overlay */}
-      <div 
-        className="absolute inset-0 z-0 opacity-10"
-        style={{ 
-          backgroundImage: `url(${import.meta.env.BASE_URL}images/islamic-bg.png)`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-background z-0" />
+    <div
+      dir="rtl"
+      className="min-h-screen flex flex-col items-center justify-between overflow-hidden relative"
+      style={{ background: "linear-gradient(160deg, #0a2e1a 0%, #0f3d22 40%, #1a5c32 70%, #0d2b18 100%)" }}
+    >
+      {/* Decorative circles */}
+      <div className="absolute top-0 left-0 w-80 h-80 rounded-full opacity-10 pointer-events-none"
+        style={{ background: "radial-gradient(circle, #d4a847 0%, transparent 70%)", transform: "translate(-30%, -30%)" }} />
+      <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full opacity-10 pointer-events-none"
+        style={{ background: "radial-gradient(circle, #d4a847 0%, transparent 70%)", transform: "translate(30%, 30%)" }} />
 
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
+      {/* Arabesque top border */}
+      <div className="w-full h-2 shrink-0" style={{ background: "linear-gradient(90deg, transparent, #d4a847, #f5c842, #d4a847, transparent)" }} />
+
+      {/* ── Verse Banner ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="z-10 text-center mb-12"
+        transition={{ duration: 0.7 }}
+        className="w-full max-w-2xl mx-auto px-5 pt-6 pb-4"
       >
-        <div className="w-32 h-32 mx-auto mb-6 bg-primary/10 rounded-full p-4 golden-glow">
-          <img 
-            src={`${import.meta.env.BASE_URL}images/logo.png`} 
-            alt="شعار اللعبة" 
-            className="w-full h-full object-contain drop-shadow-md"
-          />
+        <div
+          className="rounded-2xl px-6 py-5 text-center relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg, rgba(212,168,71,0.18) 0%, rgba(212,168,71,0.06) 100%)", border: "1.5px solid rgba(212,168,71,0.45)" }}
+        >
+          {/* Decorative quotes */}
+          <span className="absolute top-2 right-4 text-5xl leading-none opacity-20 select-none" style={{ color: "#d4a847", fontFamily: "serif" }}>"</span>
+          <span className="absolute bottom-2 left-4 text-5xl leading-none opacity-20 select-none" style={{ color: "#d4a847", fontFamily: "serif" }}>"</span>
+
+          <p
+            className="text-xl md:text-2xl leading-loose font-bold tracking-wide"
+            style={{
+              color: "#f0d080",
+              fontFamily: "'Amiri', 'Scheherazade New', 'Traditional Arabic', serif",
+              textShadow: "0 0 20px rgba(212,168,71,0.4)"
+            }}
+          >
+            ﴿ {VERSE} ﴾
+          </p>
+          <p className="mt-2 text-sm font-medium" style={{ color: "rgba(212,168,71,0.75)" }}>
+            {VERSE_REF}
+          </p>
         </div>
-        <h1 className="text-5xl md:text-7xl font-display text-primary dark:text-primary-foreground mb-4 drop-shadow-sm">
+      </motion.div>
+
+      {/* ── Logo & Title ── */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.15, type: "spring", bounce: 0.4 }}
+        className="text-center px-4 py-4"
+      >
+        {/* Ornamental circle */}
+        <div
+          className="w-28 h-28 md:w-36 md:h-36 mx-auto mb-5 rounded-full flex items-center justify-center"
+          style={{
+            background: "linear-gradient(135deg, rgba(212,168,71,0.25) 0%, rgba(212,168,71,0.08) 100%)",
+            border: "2px solid rgba(212,168,71,0.5)",
+            boxShadow: "0 0 40px rgba(212,168,71,0.25), inset 0 0 20px rgba(212,168,71,0.08)"
+          }}
+        >
+          <span style={{ fontSize: "3.5rem", filter: "drop-shadow(0 0 12px rgba(212,168,71,0.6))" }}>🕌</span>
+        </div>
+
+        <h1
+          className="text-5xl md:text-6xl font-black mb-2 tracking-wide"
+          style={{
+            fontFamily: "'Amiri', 'Scheherazade New', 'Traditional Arabic', serif",
+            background: "linear-gradient(135deg, #f5c842 0%, #d4a847 50%, #f0d080 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            textShadow: "none",
+            filter: "drop-shadow(0 2px 8px rgba(212,168,71,0.4))"
+          }}
+        >
           مسابقة إسلامية
         </h1>
-        <p className="text-lg text-muted-foreground font-medium max-w-md mx-auto">
-          اختبر معلوماتك الدينية ونافس أصدقاءك في أجواء من المتعة والفائدة
+        <p className="text-base font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
+          اختبر علمك ونافس أصدقاءك
         </p>
       </motion.div>
 
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        className="w-full max-w-md space-y-6 z-10"
+      {/* ── Mode Buttons ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="w-full max-w-md px-5 pb-4 space-y-4"
       >
+        {/* Solo */}
         <Link href="/solo" className="block group">
-          <div className="relative glass-panel rounded-3xl p-8 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 border-2 border-transparent group-hover:border-primary/20 text-center cursor-pointer overflow-hidden">
-            <div className="absolute top-0 right-0 bg-secondary text-secondary-foreground text-xs font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
-              <WifiOff className="w-3 h-3" /> بدون نت
+          <motion.div
+            whileHover={{ scale: 1.02, y: -3 }}
+            whileTap={{ scale: 0.98 }}
+            className="relative rounded-3xl p-6 cursor-pointer overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, rgba(16,185,129,0.22) 0%, rgba(5,150,105,0.12) 100%)",
+              border: "1.5px solid rgba(16,185,129,0.4)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
+            }}
+          >
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl"
+              style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.15) 0%, transparent 100%)" }} />
+            <div className="relative flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.4) 0%, rgba(5,150,105,0.2) 100%)", border: "1px solid rgba(16,185,129,0.5)" }}>
+                <User className="w-7 h-7" style={{ color: "#34d399" }} />
+              </div>
+              <div className="flex-1 text-right">
+                <h2 className="text-xl font-black mb-0.5" style={{ color: "#f0fdf4" }}>سؤال وسؤال</h2>
+                <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>العب بمفردك واختبر معلوماتك</p>
+              </div>
+              <div className="text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
+                style={{ background: "rgba(16,185,129,0.2)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }}>
+                بدون نت
+              </div>
             </div>
-            <div className="w-16 h-16 mx-auto bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <User className="w-8 h-8" />
-            </div>
-            <h2 className="text-2xl font-display font-bold text-foreground mb-2">سؤال وسؤال</h2>
-            <p className="text-muted-foreground text-sm">العب بمفردك واختبر معلوماتك الشخصية</p>
-          </div>
+          </motion.div>
         </Link>
 
+        {/* Friend */}
         <Link href="/friend" className="block group">
-          <div className="glass-panel rounded-3xl p-8 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 border-2 border-transparent group-hover:border-secondary/30 text-center cursor-pointer">
-            <div className="w-16 h-16 mx-auto bg-secondary/20 text-secondary-foreground rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Users className="w-8 h-8" />
+          <motion.div
+            whileHover={{ scale: 1.02, y: -3 }}
+            whileTap={{ scale: 0.98 }}
+            className="relative rounded-3xl p-6 cursor-pointer overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, rgba(212,168,71,0.22) 0%, rgba(180,130,40,0.12) 100%)",
+              border: "1.5px solid rgba(212,168,71,0.4)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
+            }}
+          >
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl"
+              style={{ background: "linear-gradient(135deg, rgba(212,168,71,0.12) 0%, transparent 100%)" }} />
+            <div className="relative flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                style={{ background: "linear-gradient(135deg, rgba(212,168,71,0.4) 0%, rgba(180,130,40,0.2) 100%)", border: "1px solid rgba(212,168,71,0.5)" }}>
+                <Users className="w-7 h-7" style={{ color: "#fbbf24" }} />
+              </div>
+              <div className="flex-1 text-right">
+                <h2 className="text-xl font-black mb-0.5" style={{ color: "#fffbeb" }}>العب مع صديق</h2>
+                <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>نافس أصدقاءك على نفس الجهاز أو أونلاين</p>
+              </div>
             </div>
-            <h2 className="text-2xl font-display font-bold text-foreground mb-2">العب مع صديق</h2>
-            <p className="text-muted-foreground text-sm">نافس أصدقاءك على نفس الجهاز أو أونلاين</p>
-          </div>
+          </motion.div>
+        </Link>
+
+        {/* Online */}
+        <Link href="/online" className="block group">
+          <motion.div
+            whileHover={{ scale: 1.02, y: -3 }}
+            whileTap={{ scale: 0.98 }}
+            className="relative rounded-3xl p-6 cursor-pointer overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, rgba(99,102,241,0.22) 0%, rgba(79,70,229,0.12) 100%)",
+              border: "1.5px solid rgba(99,102,241,0.4)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
+            }}
+          >
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl"
+              style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, transparent 100%)" }} />
+            <div className="relative flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.4) 0%, rgba(79,70,229,0.2) 100%)", border: "1px solid rgba(99,102,241,0.5)" }}>
+                <Wifi className="w-7 h-7" style={{ color: "#a5b4fc" }} />
+              </div>
+              <div className="flex-1 text-right">
+                <h2 className="text-xl font-black mb-0.5" style={{ color: "#eef2ff" }}>لعب أونلاين</h2>
+                <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>غرف مع الأصدقاء أو مباراة عشوائية</p>
+              </div>
+              <div className="text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
+                style={{ background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)" }}>
+                جديد
+              </div>
+            </div>
+          </motion.div>
         </Link>
       </motion.div>
+
+      {/* Arabesque bottom border */}
+      <div className="w-full h-2 shrink-0" style={{ background: "linear-gradient(90deg, transparent, #d4a847, #f5c842, #d4a847, transparent)" }} />
     </div>
   );
 }
