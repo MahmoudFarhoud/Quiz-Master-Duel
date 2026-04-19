@@ -29,7 +29,7 @@ export default function Home() {
         className="w-full max-w-2xl mx-auto px-5 pt-6 pb-4"
       >
         <div
-          className="rounded-2xl px-6 py-5 text-center relative overflow-hidden"
+          className="rounded-2xl px-6 py-10 text-center relative overflow-hidden"
           style={{ background: "linear-gradient(135deg, rgba(212,168,71,0.18) 0%, rgba(212,168,71,0.06) 100%)", border: "1.5px solid rgba(212,168,71,0.45)" }}
         >
           {/* بسم الله */}
