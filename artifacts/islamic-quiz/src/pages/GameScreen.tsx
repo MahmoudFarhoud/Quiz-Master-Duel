@@ -35,8 +35,10 @@ export default function GameScreen() {
   const [showResult, setShowResult] = useState(false);
 
   const correctAudioRef = useRef<HTMLAudioElement | null>(null);
+  const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     correctAudioRef.current = new Audio(import.meta.env.BASE_URL + "correct.mp3");
+    wrongAudioRef.current = new Audio(import.meta.env.BASE_URL + "wrong.mp3");
   }, []);
 
   const { emit, on } = useWebSocket(
@@ -97,10 +99,13 @@ export default function GameScreen() {
     const isCorrect = option === currentQ.correct_answer;
     answerQuestion(isCorrect);
 
-    // Play sound on correct answer
+    // Play sound based on answer
     if (isCorrect && correctAudioRef.current) {
       correctAudioRef.current.currentTime = 0;
       correctAudioRef.current.play().catch(() => {});
+    } else if (!isCorrect && option !== null && wrongAudioRef.current) {
+      wrongAudioRef.current.currentTime = 0;
+      wrongAudioRef.current.play().catch(() => {});
     }
 
     if (isOnlineMode && myPlayerId) {
