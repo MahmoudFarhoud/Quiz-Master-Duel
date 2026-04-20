@@ -57,8 +57,8 @@ export default function LocalSetup() {
               <Input placeholder="اسم اللاعب الأول" value={p1Name} onChange={e => setP1Name(e.target.value)} className="border-blue-200 focus-visible:ring-blue-100" />
             </div>
             <div>
-              <label className="block text-sm mb-2 text-orange-600 font-bold">اللاعب الثاني (برتقالي)</label>
-              <Input placeholder="اسم اللاعب الثاني" value={p2Name} onChange={e => setP2Name(e.target.value)} className="border-orange-200 focus-visible:ring-orange-100" />
+              <label className="block text-sm mb-2 text-green-600 font-bold">اللاعب الثاني (أخضر)</label>
+              <Input placeholder="اسم اللاعب الثاني" value={p2Name} onChange={e => setP2Name(e.target.value)} className="border-green-200 focus-visible:ring-green-100" />
             </div>
           </div>
         </div>
