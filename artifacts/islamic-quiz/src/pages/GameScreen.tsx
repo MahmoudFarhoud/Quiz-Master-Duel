@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useGameStore, PlayerColor } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, Clock, FastForward, CheckCircle2, XCircle, Play, Users, CheckCheck, Loader2, LogOut } from "lucide-react";
+import { HelpCircle, Clock, RefreshCw, CheckCircle2, XCircle, Play, Users, CheckCheck, Loader2, LogOut } from "lucide-react";
 import { quizQuestions } from "@/data/questions";
 import { useWebSocket } from "@/hooks/use-websocket";
 
@@ -536,7 +536,7 @@ export default function GameScreen() {
       <footer className="mt-6 flex justify-center gap-4">
         {[
           { key: 'fifty', label: '50:50', icon: <HelpCircle className="w-6 h-6 mb-1" />, action: handleFiftyFifty, enabled: currentPlayer.lifelines.fifty },
-          { key: 'skip', label: 'تخطي', icon: <FastForward className="w-6 h-6 mb-1" />, action: handleSkip, enabled: currentPlayer.lifelines.skip },
+          { key: 'skip', label: 'غيّر', icon: <RefreshCw className="w-6 h-6 mb-1" />, action: handleSkip, enabled: currentPlayer.lifelines.skip },
           { key: 'time', label: '+10ث', icon: <Clock className="w-6 h-6 mb-1" />, action: handleAddTime, enabled: currentPlayer.lifelines.time },
         ].map(({ key, label, icon, action, enabled }) => (
           <button key={key} onClick={action} disabled={showResult || !enabled}
