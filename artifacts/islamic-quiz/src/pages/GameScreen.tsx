@@ -82,6 +82,8 @@ export default function GameScreen() {
   const correctAudioRef = useRef<HTMLAudioElement | null>(null);
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
   const timerAudioRef = useRef<HTMLAudioElement | null>(null);
+  const skipPendingRef = useRef(false);
+
   useEffect(() => {
     correctAudioRef.current = new Audio(import.meta.env.BASE_URL + "correct.mp3");
     wrongAudioRef.current = new Audio(import.meta.env.BASE_URL + "wrong.mp3");
@@ -134,6 +136,7 @@ export default function GameScreen() {
   const isOnlineMode = mode === 'online';
 
   useEffect(() => {
+    skipPendingRef.current = false;
     setTimeLeft(currentQ?.duration_seconds || 10);
     setSelectedOption(null);
     setHiddenOptions([]);
@@ -156,7 +159,7 @@ export default function GameScreen() {
   }, [timeLeft, showResult, status]);
 
   const handleAnswer = (option: string | null) => {
-    if (showResult) return;
+    if (showResult || skipPendingRef.current) return;
     setSelectedOption(option);
     setShowResult(true);
     const isCorrect = option === currentQ.correct_answer;
@@ -216,6 +219,7 @@ export default function GameScreen() {
 
   const handleSkip = () => {
     if (!currentPlayer?.lifelines.skip) return;
+    skipPendingRef.current = true;
     useLifeline('skip');
     stopTimer();
     nextQuestion();
