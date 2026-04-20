@@ -113,7 +113,7 @@ export const useGameStore = create<GameState>((set) => ({
     status: 'playing',
     players: [
       { id: '1', name: p1Name || "اللاعب 1", score: 0, color: 'blue', lifelines: { ...defaultLifelines } },
-      { id: '2', name: p2Name || "اللاعب 2", score: 0, color: 'orange', lifelines: { ...defaultLifelines } }
+      { id: '2', name: p2Name || "اللاعب 2", score: 0, color: 'green', lifelines: { ...defaultLifelines } }
     ],
     currentTurn: 0,
     currentRound: 0,
