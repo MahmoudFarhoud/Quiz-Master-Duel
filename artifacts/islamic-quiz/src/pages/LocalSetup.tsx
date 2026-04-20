@@ -36,7 +36,7 @@ export default function LocalSetup() {
       />
 
       <div className="flex items-center mb-6 pt-4">
-        <Link href="/friend" className="p-3 bg-card border rounded-2xl hover:bg-muted transition-colors mr-auto">
+        <Link href="/" className="p-3 bg-card border rounded-2xl hover:bg-muted transition-colors mr-auto">
           <ArrowRight className="w-6 h-6" />
         </Link>
         <h1 className="text-3xl font-display font-bold text-primary flex-1 text-center ml-12">

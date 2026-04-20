@@ -156,7 +156,7 @@ export default function Home() {
         </Link>
 
         {/* Friend */}
-        <Link href="/friend" className="block group">
+        <Link href="/local" className="block group">
           <motion.div
             whileHover={{ scale: 1.02, y: -3 }}
             whileTap={{ scale: 0.98 }}
